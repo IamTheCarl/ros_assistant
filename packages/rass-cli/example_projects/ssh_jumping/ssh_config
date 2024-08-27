@@ -1,0 +1,24 @@
+Host system-a
+  HostName system-a
+  User root
+
+  # If your frequently re-imaging your device and find the need to remove old host keys from the
+  # `known_hosts` file, you can use the line below to ignore those keys and the line after it to
+  # skip recording those keys.
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+
+Host system-b
+  HostName system-b 
+  User root
+  ProxyJump system-a
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+
+Host system-c
+  HostName system-c 
+  User root
+  # You don't need to mention the jump over system-a. Ssh is smart enough to figure that out on its own.
+  ProxyJump system-b
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
