@@ -1,0 +1,8 @@
+name: "ROS Assistant"
+description: "Develop, manage, and integrate robots with Home Assistant"
+version: "0.1.0"
+slug: "ros_assistant"
+init: false
+arch:
+  - aarch64
+  - amd64
