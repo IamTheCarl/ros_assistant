@@ -1,0 +1,5 @@
+websockets
+cbor2
+homeassistant
+
+deepdiff

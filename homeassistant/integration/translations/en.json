@@ -1,0 +1,16 @@
+{
+    "config": {
+        "error": {
+            "invalid_uri": "Host must be a websocket URI"
+        }
+    },
+    "step": {
+        "user": {
+            "data": {
+                "name": "Robot Name",
+                "host": "Host address",
+                "port": "Socket address"
+            }
+        }
+    }
+}

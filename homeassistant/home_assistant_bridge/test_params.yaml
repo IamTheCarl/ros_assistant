@@ -1,0 +1,23 @@
+/home_assistant_bridge:
+  ros__parameters:
+    services_to_forward_to_ha: 
+      - '{
+          "ros_interface": {
+            "package": "example_interfaces",
+            "service": "AddTwoInts",
+            "server_path": "add_two_ints"
+          },
+          "description": "Add two integer values together",
+          "example": "{ \"a\": 2, \"b\": 2 }",
+          "timeout_seconds": 10,
+          "fields": {
+            "a": {
+              "description": "The first value to be added",
+              "example": "24"
+            },
+            "b": {
+              "description": "The second value to be added",
+              "example": "25"
+            }
+          }
+        }'
