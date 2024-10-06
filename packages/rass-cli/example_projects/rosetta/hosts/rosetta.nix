@@ -1,5 +1,6 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, ... }:
 let
+  pkgs = import ../../../../../nix/ros.nix { };
   getSshKeys = username:
     lib.splitString "\n"
       (builtins.readFile
@@ -11,7 +12,7 @@ in
   imports = [
     <nixpkgs/nixos/modules/installer/sd-card/sd-image-aarch64.nix>
   ];
-  
+
   options = {
     # ROS Assistant configuration
     ros_assistant = {
@@ -31,7 +32,7 @@ in
       "bcm2835_dma"
       "i2c_bcm2835"
     ];
-  
+
     # Fix missing modules
     # https://github.com/NixOS/nixpkgs/issues/154163
     nixpkgs.overlays = [
@@ -42,9 +43,20 @@ in
     ];
 
     # Networking
-    systemd.network.enable = true;
-    networking.useNetworkd = true;
-    networking.hostName = "raspberry-pi";
+    systemd.network = {
+      enable = true;
+      # Switching to network manager will cause this to block until it eventually fails.
+      wait-online.enable = false;
+    };
+    networking =
+      {
+        # Disable networkd and use networkmanager instead.
+        # It's better suited for on-the-fly wifi configuration, which I don't want to bake into this
+        # configuration file.
+        useNetworkd = false;
+        networkmanager.enable = true;
+        hostName = "rosetta";
+      };
 
     # SSH
     systemd.services.sshd.wantedBy = lib.mkForce [ "multi-user.target" ];
@@ -59,6 +71,5 @@ in
     environment.systemPackages = [
       pkgs.neovim
     ];
-
   };
 }
