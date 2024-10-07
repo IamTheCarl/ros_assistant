@@ -1,0 +1,10 @@
+[package]
+name = "create_cmd_vel"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+tokio = { version = "1.40", features = [ "full" ] }
+r2r = { git = "https://github.com/IamTheCarl/r2r.git", branch = "parameter_try_into" }
+futures = "0.3"

@@ -4,3 +4,6 @@ target
 
 # Python caches
 __pycache__
+
+# Nix outputs
+result

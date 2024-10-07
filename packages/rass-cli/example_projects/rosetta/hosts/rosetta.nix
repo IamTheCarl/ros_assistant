@@ -1,6 +1,7 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
-  pkgs = import ../../../../../nix/ros.nix { };
+  ros_tarball = import ../../../../../nix/ros_tarball.nix { };
+  ros_pkgs = import ../../../../../nix/ros.nix { pkgs = pkgs; };
   getSshKeys = username:
     lib.splitString "\n"
       (builtins.readFile
@@ -11,6 +12,7 @@ in
   # Include configuration to generate a deployable boot drive.
   imports = [
     <nixpkgs/nixos/modules/installer/sd-card/sd-image-aarch64.nix>
+    ((ros_tarball) + "/modules")
   ];
 
   options = {
@@ -56,6 +58,9 @@ in
         useNetworkd = false;
         networkmanager.enable = true;
         hostName = "rosetta";
+
+        # TODO re-enable firewall.
+        firewall.enable = false;
       };
 
     # SSH
@@ -70,6 +75,90 @@ in
     # Install system packages.
     environment.systemPackages = [
       pkgs.neovim
+      pkgs.htop
+      (ros_pkgs.rosPackages.humble.buildEnv {
+        paths = [
+          ros_pkgs.rosPackages.humble.ros-core
+        ];
+      })
     ];
+
+    # Let ROS access serial interfaces.
+    users.groups.dialout.members = [ "ros" ];
+
+    services.ros2 = {
+      enable = true;
+      distro = "humble";
+      domainId = 0;
+      nodes = {
+        # Bridges ROS and the iRobot Create interface.
+        create_bridge = {
+          package = "create_bridge";
+          env = (ros_pkgs.rosPackages.humble.buildEnv {
+            paths = [
+              ros_pkgs.rosPackages.humble.ros-core
+              (import ../../../../create_bridge { pkgs = pkgs; })
+            ];
+          });
+          node = "create_bridge";
+          args = [ ];
+          rosArgs = [ ];
+          params = {
+            serial_device = "\"/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DA01NM8I-if00-port0\"";
+          };
+        };
+        # # Provides joystick messages from a locally connected joystick.
+        # joy = {
+        #   package = "joy";
+        #   env = (ros_pkgs.rosPackages.humble.buildEnv {
+        #     paths = [
+        #       ros_pkgs.rosPackages.humble.ros-core
+        #       ros_pkgs.rosPackages.humble.joy
+        #     ];
+        #   });
+        #   node = "joy_node";
+        #   args = [ ];
+        #   rosArgs = [ ];
+        #   params = { };
+        # };
+        # Converts Joystick messages into velocity commands.
+        teleop-twist-joy = {
+          package = "teleop_twist_joy";
+          env = (ros_pkgs.rosPackages.humble.buildEnv {
+            paths = [
+              ros_pkgs.rosPackages.humble.ros-core
+              ros_pkgs.rosPackages.humble.teleop-twist-joy
+            ];
+          });
+          node = "teleop_node";
+          args = [ ];
+          rosArgs = [ ];
+          params = {
+            # Documentation for these parameters:
+            # https://docs.ros.org/en/ros2_packages/humble/api/teleop_twist_joy/standard_docs/README.html
+            enable_button = "4";
+            enable_turbo_button = "5";
+            "axis_linear.x" = "1";
+            "axis_angular.yaw" = "0";
+            "scale_angular.yaw" = "1.0";
+          };
+        };
+        # Converts velocity commands into Create 2 movement commands.
+        create_cmd_vel = {
+          package = "create_cmd_vel";
+          env = (ros_pkgs.rosPackages.humble.buildEnv {
+            paths = [
+              ros_pkgs.rosPackages.humble.ros-core
+              (import ../../../../create_cmd_vel { pkgs = pkgs; })
+            ];
+          });
+          node = "create_cmd_vel";
+          args = [ ];
+          rosArgs = [ ];
+          params = { };
+        };
+      };
+    };
+
   };
 }
