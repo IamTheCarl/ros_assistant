@@ -144,7 +144,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "create_interface"
+name = "create_bridge"
 version = "0.1.0"
 dependencies = [
  "anyhow",

@@ -9,6 +9,7 @@ in
 [
   rust
   rust_platform.bindgenHook
+  pkgs.crate2nix
 
   (pkgs.rosPackages.humble.buildEnv
     {

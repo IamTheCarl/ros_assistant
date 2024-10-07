@@ -14,9 +14,18 @@ rust_platform.buildRustPackage rec {
 
   src = ./.;
 
-  cargoSha256 = "sha256-Xgw4HQWa/ubCGuFB49h1mWwnZjhV4LrcXweVQi4Kw7c=";
+  cargoHash = "sha256-iX901ZpDPfAUqEJ9DeIpsDPmSER6p61iAR1C7QY1f5Y=";
 
-  nativeBuildInputs = import ./build_dependencies.nix { pkgs = pkgs; };
+  nativeBuildInputs = [
+    rust_platform.bindgenHook
+    # (pkgs.rosPackages.humble.buildEnv
+    #   {
+    #     paths = [
+    #       pkgs.rosPackages.humble.ros-core
+    #     ];
+    #   })
+    pkgs.rosPackages.humble.ros-core
+  ];
   propigatedBuildInputs = [
   ];
 
@@ -27,3 +36,19 @@ rust_platform.buildRustPackage rec {
     maintainers = with maintainers; [ "James Carl" ];
   };
 }
+
+
+# { pkgs ? import <nixpkgs> { } }:
+# let
+#   pkgs = import ../../nix/ros.nix { pkgs = pkgs; };
+#   cargo_nix = pkgs.callPackage ./Cargo.nix { };
+#   crateOverrides = pkgs.defaultCrateOverrides // {
+#     create_bridge = attrs: {
+#       buildInputs = (attrs.buildInputs or [ ]) ++ [ ];
+#       nativeBuildInputs = (attrs.nativeBuildInputs or [ ]) ++ [ (import ./build_dependencies.nix { pkgs = pkgs; }) ];
+#     };
+#   };
+# in
+# cargo_nix.rootCrate.build.override {
+#   crateOverrides = crateOverrides;
+# }
