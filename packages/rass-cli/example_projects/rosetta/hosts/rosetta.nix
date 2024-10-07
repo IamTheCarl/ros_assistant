@@ -70,6 +70,7 @@ in
     # Install system packages.
     environment.systemPackages = [
       pkgs.neovim
+      (import ../../../../create_interface { pkgs = pkgs; })
     ];
   };
 }
