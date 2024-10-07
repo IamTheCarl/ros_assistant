@@ -1,15 +1,9 @@
 { pkgs ? import <nixpkgs> { } }:
 let
   pkgs = import ../../nix/ros.nix { pkgs = pkgs; };
-  rust = import ../../nix/rust.nix { pkgs = pkgs; };
 in
 pkgs.mkShell {
-  buildInputs = [
-    rust
-
-    # ROS related stuff.
-    pkgs.rosPackages.humble.ros-core
-  ];
+  buildInputs = import ./build_dependencies.nix { pkgs = pkgs; };
 
   # Set environment variables
   shellHook = ''

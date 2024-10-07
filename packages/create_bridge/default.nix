@@ -1,23 +1,23 @@
 { pkgs ? import <nixpkgs> { }, ... }:
 let
+  pkgs = import ../../nix/ros.nix { pkgs = pkgs; };
   rust = import ../../nix/rust.nix { pkgs = pkgs; };
   rust_platform = pkgs.makeRustPlatform {
     cargo = rust;
     rustc = rust;
   };
-
   cargo_toml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
 in
 rust_platform.buildRustPackage rec {
-  pname = "create_interface";
+  pname = "create_bridge";
   version = cargo_toml.package.version;
 
   src = ./.;
 
-  cargoSha256 = "sha256-hf2AvQaAC0R4ze/eHEw5QpGt4LLW9zJClbqiFzMiElM=";
+  cargoSha256 = "sha256-Xgw4HQWa/ubCGuFB49h1mWwnZjhV4LrcXweVQi4Kw7c=";
 
+  nativeBuildInputs = import ./build_dependencies.nix { pkgs = pkgs; };
   propigatedBuildInputs = [
-    pkgs.nix
   ];
 
   meta = with pkgs.lib; {
