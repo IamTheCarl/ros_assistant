@@ -14,7 +14,7 @@ rust_platform.buildRustPackage rec {
 
   src = ./.;
 
-  cargoSha256 = "sha256-pKvlnSgBGmlPgqNJp3SjOUGsQvQD5DLoNSOlah5VAzY=";
+  cargoHash = "sha256-TFS1JV6HhNLE9GqOEkHvgZl2Kl9k5dffpHOSIMjyVY4=";
 
   checkFlags = [
     # Requires access to the nix store, which is not available during a build.
