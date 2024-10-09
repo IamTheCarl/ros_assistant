@@ -548,6 +548,10 @@ rec {
             packageId = "anyhow";
           }
           {
+            name = "futures";
+            packageId = "futures";
+          }
+          {
             name = "log";
             packageId = "log";
           }
@@ -2174,7 +2178,7 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          rev = "a41dc40f72130d076cff088937c124f9aa44cfdc";
           sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         authors = [
@@ -2296,7 +2300,7 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          rev = "a41dc40f72130d076cff088937c124f9aa44cfdc";
           sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         authors = [
@@ -2334,7 +2338,7 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          rev = "a41dc40f72130d076cff088937c124f9aa44cfdc";
           sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         authors = [
@@ -2368,7 +2372,7 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          rev = "a41dc40f72130d076cff088937c124f9aa44cfdc";
           sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         procMacro = true;
@@ -2398,7 +2402,7 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          rev = "a41dc40f72130d076cff088937c124f9aa44cfdc";
           sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         authors = [
@@ -2490,7 +2494,7 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          rev = "a41dc40f72130d076cff088937c124f9aa44cfdc";
           sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         authors = [

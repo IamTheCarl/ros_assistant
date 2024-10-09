@@ -8,6 +8,7 @@
     {
       paths = [
         pkgs.rosPackages.humble.ros-core
+        (import ../create_bridge_interface { pkgs = pkgs; })
       ];
     })
 ]

@@ -7,6 +7,14 @@ let
       (builtins.readFile
         (builtins.fetchurl
           "https://github.com/${username}.keys"));
+
+  root_env =
+    (ros_pkgs.rosPackages.humble.buildEnv {
+      paths = [
+        ros_pkgs.rosPackages.humble.ros-core
+        (import ../../../../create_bridge_interface { pkgs = pkgs; })
+      ];
+    });
 in
 {
   # Include configuration to generate a deployable boot drive.
@@ -72,17 +80,30 @@ in
     # Install system packages.
     environment.systemPackages = [
       pkgs.neovim
-      (ros_pkgs.rosPackages.humble.buildEnv {
-        paths = [
-          ros_pkgs.rosPackages.humble.ros-core
-          (import ../../../../create_bridge { pkgs = pkgs; })
-        ];
-      })
-
+      root_env
     ];
 
     # Let ROS access serial interfaces.
     users.groups.dialout.members = [ "ros" ];
+
+    # Starting this daemon fixes discovery issues between the ros and root users.
+    systemd.services.ros_daemon = {
+      description = "ROS discovery daemon";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "network.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = "yes";
+        ExecStart = "${root_env}/bin/ros2 daemon start";
+        User = "ros";
+        Group = "ros";
+      };
+      environment = {
+        ROS_DOMAIN_ID = "0";
+        ROS_HOME = "/var/lib/ros";
+      };
+    };
+
 
     services.ros2 = {
       enable = true;
@@ -102,7 +123,6 @@ in
           rosArgs = [ ];
           params = {
             serial_device = "\"/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DA01NM8I-if00-port0\"";
-            baud_rate = "115200";
           };
         };
       };

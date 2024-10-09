@@ -1,6 +1,6 @@
 { pkgs ? import ../../nix/ros.nix { } }:
 pkgs.rosPackages.humble.buildRosPackage {
-  pname = "homeassistant_interface";
+  pname = "create_bridge_interface";
   version = "0.1.0";
   src = ./.;
 
