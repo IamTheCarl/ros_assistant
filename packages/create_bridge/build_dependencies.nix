@@ -1,11 +1,4 @@
-{ pkgs }:
-let
-  rust = import ../../nix/rust.nix { pkgs = pkgs; };
-  rust_platform = pkgs.makeRustPlatform {
-    cargo = rust;
-    rustc = rust;
-  };
-in
+{ pkgs, rust, rust_platform }:
 [
   rust
   rust_platform.bindgenHook

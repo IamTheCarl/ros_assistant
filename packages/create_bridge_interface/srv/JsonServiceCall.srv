@@ -1,0 +1,30 @@
+# The domain that the service is filed under.
+string domain
+
+# The name of the service to call on Home Assistant.
+string name
+
+# True if the service can return a response. Only set this to true if you know the
+# service is capable of returning a response.
+bool return_response
+
+# Arguments for the request, formatted as Json.
+# Json was unfortunately necessary, as Home Assistant services expect many features that
+# are not supported by ROS messages.
+string json_request
+---
+uint32 status
+uint32 SUCCESS = 0
+
+# We are not connected to the Home Assistant instance.
+uint32 NOT_CONNECTED=1
+
+# Some other failure occurred.
+uint32 SERVICE_FAILURE = 2
+
+# The request you made was not valid json.
+uint32 BAD_JSON = 3
+
+# Results of the service call. Will be a json structure on success.
+# Will be a string on SERVICE_FAILURE or BAD_JSON.
+string result

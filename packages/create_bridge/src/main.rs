@@ -11,6 +11,14 @@ async fn main() -> Result<()> {
     let ctx = r2r::Context::create()?;
     let mut node = r2r::Node::create(ctx, "create_bridge", "create_bridge")?;
 
+    let serial_device: String = node
+        .get_parameter("serial_device")
+        .context("Failed to get serial device name.")?;
+
+    let baud_rate: i64 = node
+        .get_parameter("baud_rate")
+        .context("Failed to get device baud rate.")?;
+
     // TODO the path and baud rate should be ROS params.
     let serial_config = tokio_serial::new(
         "/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DA01NM8I-if00-port0",

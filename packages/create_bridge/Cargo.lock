@@ -34,9 +34,9 @@ checksum = "86fdf8605db99b54d3cd748a44c6d04df638eb5dafb219b135d0149bd0db01f6"
 
 [[package]]
 name = "autocfg"
-version = "1.3.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
+checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "backtrace"
@@ -702,19 +702,18 @@ dependencies = [
 
 [[package]]
 name = "proc-macro-crate"
-version = "1.3.1"
+version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f4c021e1093a56626774e81216a4ce732a735e5bad4868a03f3ed65ca0c3919"
+checksum = "8ecf48c7ca261d60b74ab1a7b20da18bede46776b2e55535cb958eb595c5fa7b"
 dependencies = [
- "once_cell",
  "toml_edit",
 ]
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e719e8df665df0d1c8fbfd238015744736151d4445ec0836b8e628aae103b77"
+checksum = "b3e4daa0dcf6feba26f985457cdf104d4b4256fc5a09547140f3631bb076b19a"
 dependencies = [
  "unicode-ident",
 ]
@@ -731,8 +730,7 @@ dependencies = [
 [[package]]
 name = "r2r"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d333c7056fd130eb66736f0d622011bd7734bd7b6cae216428f0da7bd30925a0"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
 dependencies = [
  "force-send-sync",
  "futures",
@@ -759,8 +757,7 @@ dependencies = [
 [[package]]
 name = "r2r_actions"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0492637220592e316a0708212f0106827215e5768f563b4251993bcec96d40e2"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
 dependencies = [
  "bindgen",
  "r2r_common",
@@ -771,8 +768,7 @@ dependencies = [
 [[package]]
 name = "r2r_common"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bacedeb1c6c078a36d3df827fc2334e6cda1c37a6b1a6acd44476771898ebed"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
 dependencies = [
  "bindgen",
  "os_str_bytes",
@@ -783,8 +779,7 @@ dependencies = [
 [[package]]
 name = "r2r_macros"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b87edf202755674fb9688a99cdd579547cd284e77150a7ed4467f2d255a8796"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -794,8 +789,7 @@ dependencies = [
 [[package]]
 name = "r2r_msg_gen"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46c3711159dad6743b3688ab9d7f102097479289c494b52b45a582aa92bf5501"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
 dependencies = [
  "bindgen",
  "force-send-sync",
@@ -812,8 +806,7 @@ dependencies = [
 [[package]]
 name = "r2r_rcl"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6daf71bab8daf11941083b14f404dcfdfb67b05a51ee32b32b9f50a30749f01"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
 dependencies = [
  "bindgen",
  "paste",
@@ -858,9 +851,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.5.4"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0884ad60e090bf1345b93da0a5de8923c93884cd03f40dfcfddd3b4bee661853"
+checksum = "9b6dfecf2c74bce2466cabf93f6664d6998a69eb21e39f4207930065b27b771f"
 dependencies = [
  "bitflags 2.6.0",
 ]
@@ -1129,9 +1122,9 @@ checksum = "0dd7358ecb8fc2f8d014bf86f6f638ce72ba252a2c3a2572f2a795f1d23efb41"
 
 [[package]]
 name = "toml_edit"
-version = "0.19.15"
+version = "0.22.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b5bb770da30e5cbfde35a2d7b9b8a2c4b8ef89548a7a6aeab5c9a576e3e7421"
+checksum = "4ae48d6208a266e853d946088ed816055e556cc6028c5e8e2b84d9fa5dd7c7f5"
 dependencies = [
  "indexmap",
  "toml_datetime",
@@ -1362,9 +1355,9 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "winnow"
-version = "0.5.40"
+version = "0.6.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f593a95398737aeed53e489c785df13f3618e41dbcd6718c6addbf1395aa6876"
+checksum = "36c1fec1a2bb5866f07c25f68c26e565c4c200aebb96d7e55710c19d3e8ac49b"
 dependencies = [
  "memchr",
 ]

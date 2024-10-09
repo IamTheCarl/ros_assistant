@@ -1,6 +1,7 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
-  pkgs = import ../../../../../nix/ros.nix { };
+  ros_tarball = import ../../../../../nix/ros_tarball.nix { };
+  ros_pkgs = import ../../../../../nix/ros.nix { pkgs = pkgs; };
   getSshKeys = username:
     lib.splitString "\n"
       (builtins.readFile
@@ -11,6 +12,7 @@ in
   # Include configuration to generate a deployable boot drive.
   imports = [
     <nixpkgs/nixos/modules/installer/sd-card/sd-image-aarch64.nix>
+    ((ros_tarball) + "/modules")
   ];
 
   options = {
@@ -70,7 +72,33 @@ in
     # Install system packages.
     environment.systemPackages = [
       pkgs.neovim
-      (import ../../../../create_interface { pkgs = pkgs; })
+      (ros_pkgs.rosPackages.humble.buildEnv {
+        paths = [
+          ros_pkgs.rosPackages.humble.ros-core
+          (import ../../../../create_bridge { pkgs = pkgs; })
+        ];
+      })
+
     ];
+
+    services.ros2 = {
+      enable = true;
+      distro = "humble";
+      domainId = 0;
+      nodes = {
+        create_bridge = {
+          package = "create_bridge";
+          env = (import ../../../../create_bridge { pkgs = pkgs; });
+          node = "create_bridge";
+          args = [ ];
+          rosArgs = [ ];
+          params = {
+            serial_device = "/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DA01NM8I-if00-port0";
+            baud_rate = "115200";
+          };
+        };
+      };
+    };
+
   };
 }
