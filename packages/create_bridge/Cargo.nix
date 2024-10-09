@@ -364,7 +364,6 @@ rec {
         version = "0.10.4";
         edition = "2018";
         sha256 = "0w9sa2ypmrsqqvc20nhwr75wbb5cjr4kkyhpjm1z1lv2kdicfy1h";
-        libName = "block_buffer";
         authors = [
           "RustCrypto Developers"
         ];
@@ -414,7 +413,6 @@ rec {
         version = "1.0.0";
         edition = "2018";
         sha256 = "1za0vb97n4brpzpv8lsbnzmq5r8f2b0cpqqr0sy8h5bn751xxwds";
-        libName = "cfg_if";
         authors = [
           "Alex Crichton <alex@alexcrichton.com>"
         ];
@@ -430,7 +428,6 @@ rec {
         edition = "2021";
         links = "clang";
         sha256 = "1x1r9yqss76z8xwpdanw313ss6fniwc1r7dzb5ycjn0ph53kj0hb";
-        libName = "clang_sys";
         authors = [
           "Kyle Mayes <kyle@mayeses.com>"
         ];
@@ -583,7 +580,6 @@ rec {
         version = "0.8.5";
         edition = "2021";
         sha256 = "03bp38ljx4wj6vvy4fbhx41q8f585zyqix6pncz1mkz93z08qgv1";
-        libName = "crossbeam_deque";
         dependencies = [
           {
             name = "crossbeam-epoch";
@@ -607,7 +603,6 @@ rec {
         version = "0.9.18";
         edition = "2021";
         sha256 = "03j2np8llwf376m3fxqx859mgp9f83hj1w34153c7a9c7i5ar0jv";
-        libName = "crossbeam_epoch";
         dependencies = [
           {
             name = "crossbeam-utils";
@@ -629,7 +624,6 @@ rec {
         version = "0.8.20";
         edition = "2021";
         sha256 = "100fksq5mm1n7zj242cclkw6yf7a4a8ix3lvpfkhxvdhbda9kv12";
-        libName = "crossbeam_utils";
         features = {
           "default" = [ "std" ];
           "loom" = [ "dep:loom" ];
@@ -641,7 +635,6 @@ rec {
         version = "0.1.6";
         edition = "2018";
         sha256 = "1cvby95a6xg7kxdz5ln3rl9xh66nz66w46mm3g56ri1z5x815yqv";
-        libName = "crypto_common";
         authors = [
           "RustCrypto Developers"
         ];
@@ -762,7 +755,6 @@ rec {
         version = "1.1.0";
         edition = "2018";
         sha256 = "1dpy69psypanm8mx3k0mjmvb0mccyyd8yffcdr1899la8k68ss1j";
-        libName = "force_send_sync";
         authors = [
           "Markus Klein <markus-klein@live.de>"
         ];
@@ -1164,7 +1156,6 @@ rec {
         version = "0.3.9";
         edition = "2021";
         sha256 = "092hxjbjnq5fmz66grd9plxd0sh6ssg5fhgwwwqbrzgzkjwdycfj";
-        libName = "hermit_abi";
         authors = [
           "Stefan Lankes"
         ];
@@ -1227,7 +1218,6 @@ rec {
         version = "0.4.1";
         edition = "2021";
         sha256 = "0ysy5k3wf54yangy25hkj10xx332cj2hb937xasg6riziv7yczk1";
-        libName = "io_kit_sys";
         authors = [
           "Junji Takakura <j.takakura@gmail.com>"
         ];
@@ -1347,7 +1337,6 @@ rec {
         version = "0.4.14";
         edition = "2021";
         sha256 = "12gsjgbhhjwywpqcrizv80vrp7p7grsz5laqq773i33wphjsxcvq";
-        libName = "linux_raw_sys";
         authors = [
           "Dan Gohman <dev@sunfishcode.online>"
         ];
@@ -1469,7 +1458,6 @@ rec {
         version = "0.2.1";
         edition = "2018";
         sha256 = "16ppc5g84aijpri4jzv14rvcnslvlpphbszc7zzp6vfkddf4qdb8";
-        libName = "minimal_lexical";
         authors = [
           "Alex Huszagh <ahuszagh@gmail.com>"
         ];
@@ -1600,7 +1588,6 @@ rec {
         version = "5.0.5";
         edition = "2018";
         sha256 = "1b52jxx6hp9nqjk1rr9b8isv3cprlm5gyrmxncaf3h69ll6cd910";
-        libName = "mio_serial";
         authors = [
           "Zac Berkowitz <zac.berkowitz@gmail.com>"
         ];
@@ -2070,7 +2057,6 @@ rec {
         version = "0.2.14";
         edition = "2018";
         sha256 = "00nx3f04agwjlsmd3mc5rx5haibj2v8q9b52b0kwn63wcv4nz9mx";
-        libName = "pin_project_lite";
 
       };
       "pin-utils" = rec {
@@ -2078,7 +2064,6 @@ rec {
         version = "0.1.0";
         edition = "2018";
         sha256 = "117ir7vslsl2z1a7qzhws4pd01cg2d3338c47swjyvqv2n60v1wb";
-        libName = "pin_utils";
         authors = [
           "Josef Brandl <mail@josefbrandl.de>"
         ];
@@ -2189,8 +2174,8 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "b5e43cb9be7548228e0c11de347ab06f2390895d";
-          sha256 = "1w9y60idjf38k5ldn2npysmdbcijhckc8131q4lixqdhbkaw84hs";
+          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         authors = [
           "Martin Dahl <martin.dahl@gmail.com>"
@@ -2311,8 +2296,8 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "b5e43cb9be7548228e0c11de347ab06f2390895d";
-          sha256 = "1w9y60idjf38k5ldn2npysmdbcijhckc8131q4lixqdhbkaw84hs";
+          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         authors = [
           "Martin Dahl <martin.dahl@gmail.com>"
@@ -2349,8 +2334,8 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "b5e43cb9be7548228e0c11de347ab06f2390895d";
-          sha256 = "1w9y60idjf38k5ldn2npysmdbcijhckc8131q4lixqdhbkaw84hs";
+          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         authors = [
           "Martin Dahl <martin.dahl@gmail.com>"
@@ -2383,8 +2368,8 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "b5e43cb9be7548228e0c11de347ab06f2390895d";
-          sha256 = "1w9y60idjf38k5ldn2npysmdbcijhckc8131q4lixqdhbkaw84hs";
+          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         procMacro = true;
         authors = [
@@ -2413,8 +2398,8 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "b5e43cb9be7548228e0c11de347ab06f2390895d";
-          sha256 = "1w9y60idjf38k5ldn2npysmdbcijhckc8131q4lixqdhbkaw84hs";
+          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         authors = [
           "Martin Dahl <martin.dahl@gmail.com>"
@@ -2505,8 +2490,8 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/IamTheCarl/r2r.git";
-          rev = "b5e43cb9be7548228e0c11de347ab06f2390895d";
-          sha256 = "1w9y60idjf38k5ldn2npysmdbcijhckc8131q4lixqdhbkaw84hs";
+          rev = "2f57684768d360fe33e47e7394decbf37a811a96";
+          sha256 = "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh";
         };
         authors = [
           "Martin Dahl <martin.dahl@gmail.com>"
@@ -2612,7 +2597,6 @@ rec {
         edition = "2021";
         links = "rayon-core";
         sha256 = "1qpwim68ai5h0j7axa8ai8z0payaawv3id0lrgkqmapx7lx8fr8l";
-        libName = "rayon_core";
         authors = [
           "Niko Matsakis <niko@alum.mit.edu>"
           "Josh Stone <cuviper@gmail.com>"
@@ -2809,7 +2793,6 @@ rec {
         version = "1.1.0";
         edition = "2015";
         sha256 = "1qkc5khrmv5pqi5l5ca9p5nl5hs742cagrndhbrlk3dhlrx3zm08";
-        libName = "rustc_hash";
         authors = [
           "The Rust Project Developers"
         ];
@@ -3193,7 +3176,6 @@ rec {
         version = "1.4.2";
         edition = "2015";
         sha256 = "1cb5akgq8ajnd5spyn587srvs4n26ryq0p78nswffwhv46sf1sd9";
-        libName = "signal_hook_registry";
         authors = [
           "Michal 'vorner' Vaner <vorner@vorner.cz>"
           "Masaki Hara <ackie.h.gmai@gmail.com>"
@@ -3503,7 +3485,6 @@ rec {
         edition = "2021";
         sha256 = "0lnpg14h1v3fh2jvnc8cz7cjf0m7z1xgkwfpcyy632g829imjgb9";
         procMacro = true;
-        libName = "tokio_macros";
         authors = [
           "Tokio Contributors <team@tokio.rs>"
         ];
@@ -3529,7 +3510,6 @@ rec {
         version = "5.4.4";
         edition = "2018";
         sha256 = "1ak41ia40m5am8diihspvqhd4nrb2wjbnnkxz32rj2jjy162wvma";
-        libName = "tokio_serial";
         authors = [
           "Zac Berkowitz <zac.berkowitz@gmail.com>"
         ];
@@ -3812,7 +3792,6 @@ rec {
         version = "0.4.0";
         edition = "2015";
         sha256 = "1dmpa6mvcvzz16zg6d5vrfy4bxgg541wxrcip7cnshi06v38ffxc";
-        libName = "winapi_i686_pc_windows_gnu";
         authors = [
           "Peter Atashian <retep998@gmail.com>"
         ];
@@ -3823,7 +3802,6 @@ rec {
         version = "0.4.0";
         edition = "2015";
         sha256 = "0gqq64czqb64kskjryj8isp62m2sgvx25yyj3kpc2myh85w24bki";
-        libName = "winapi_x86_64_pc_windows_gnu";
         authors = [
           "Peter Atashian <retep998@gmail.com>"
         ];
@@ -3834,7 +3812,6 @@ rec {
         version = "0.48.0";
         edition = "2018";
         sha256 = "1aan23v5gs7gya1lc46hqn9mdh8yph3fhxmhxlw36pn6pqc28zb7";
-        libName = "windows_sys";
         authors = [
           "Microsoft"
         ];
@@ -4128,7 +4105,6 @@ rec {
         version = "0.52.0";
         edition = "2021";
         sha256 = "0gd3v4ji88490zgb6b5mq5zgbvwv7zx1ibn8v3x83rwcdbryaar8";
-        libName = "windows_sys";
         authors = [
           "Microsoft"
         ];
@@ -4376,7 +4352,6 @@ rec {
         version = "0.48.5";
         edition = "2018";
         sha256 = "034ljxqshifs1lan89xwpcy1hp0lhdh4b5n0d2z4fwjx2piacbws";
-        libName = "windows_targets";
         authors = [
           "Microsoft"
         ];

@@ -730,7 +730,7 @@ dependencies = [
 [[package]]
 name = "r2r"
 version = "0.9.0"
-source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#2f57684768d360fe33e47e7394decbf37a811a96"
 dependencies = [
  "force-send-sync",
  "futures",
@@ -757,7 +757,7 @@ dependencies = [
 [[package]]
 name = "r2r_actions"
 version = "0.9.0"
-source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#2f57684768d360fe33e47e7394decbf37a811a96"
 dependencies = [
  "bindgen",
  "r2r_common",
@@ -768,7 +768,7 @@ dependencies = [
 [[package]]
 name = "r2r_common"
 version = "0.9.0"
-source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#2f57684768d360fe33e47e7394decbf37a811a96"
 dependencies = [
  "bindgen",
  "os_str_bytes",
@@ -779,7 +779,7 @@ dependencies = [
 [[package]]
 name = "r2r_macros"
 version = "0.9.0"
-source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#2f57684768d360fe33e47e7394decbf37a811a96"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -789,7 +789,7 @@ dependencies = [
 [[package]]
 name = "r2r_msg_gen"
 version = "0.9.0"
-source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#2f57684768d360fe33e47e7394decbf37a811a96"
 dependencies = [
  "bindgen",
  "force-send-sync",
@@ -806,7 +806,7 @@ dependencies = [
 [[package]]
 name = "r2r_rcl"
 version = "0.9.0"
-source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#b5e43cb9be7548228e0c11de347ab06f2390895d"
+source = "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#2f57684768d360fe33e47e7394decbf37a811a96"
 dependencies = [
  "bindgen",
  "paste",

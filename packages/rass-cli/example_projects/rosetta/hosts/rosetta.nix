@@ -81,6 +81,9 @@ in
 
     ];
 
+    # Let ROS access serial interfaces.
+    users.groups.dialout.members = [ "ros" ];
+
     services.ros2 = {
       enable = true;
       distro = "humble";
@@ -88,12 +91,17 @@ in
       nodes = {
         create_bridge = {
           package = "create_bridge";
-          env = (import ../../../../create_bridge { pkgs = pkgs; });
+          env = (ros_pkgs.rosPackages.humble.buildEnv {
+            paths = [
+              ros_pkgs.rosPackages.humble.ros-core
+              (import ../../../../create_bridge { pkgs = pkgs; })
+            ];
+          });
           node = "create_bridge";
           args = [ ];
           rosArgs = [ ];
           params = {
-            serial_device = "/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DA01NM8I-if00-port0";
+            serial_device = "\"/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DA01NM8I-if00-port0\"";
             baud_rate = "115200";
           };
         };
