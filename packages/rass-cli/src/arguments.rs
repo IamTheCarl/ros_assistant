@@ -21,6 +21,7 @@ pub enum SubCommand {
     NewProject(NewProject),
     Deploy(Deploy),
     Ssh(SshCommand),
+    Firewall(firewall::Command),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -96,4 +97,41 @@ pub struct SshCommand {
 
     #[argh(positional)]
     pub host: Option<String>,
+}
+
+pub mod firewall {
+    use super::*;
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// Manage the robot's firewalls.
+    #[argh(subcommand, name = "firewall")]
+    pub struct Command {
+        #[argh(option)]
+        /// restrict which hosts are modified using a regex expression
+        pub hosts: Option<String>,
+
+        #[argh(option)]
+        /// specify a directory to be used as the project root (defaults to the current directory)
+        pub project_root: Option<PathBuf>,
+
+        #[argh(subcommand)]
+        pub subcommand: SubCommand,
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    #[argh(subcommand)]
+    pub enum SubCommand {
+        Disable(Disable),
+        Reset(Reset),
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// Disable the firewalls.
+    #[argh(subcommand, name = "disable")]
+    pub struct Disable {}
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// Reset the firewalls to their original state.
+    #[argh(subcommand, name = "reset")]
+    pub struct Reset {}
 }
