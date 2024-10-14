@@ -1,0 +1,4 @@
+bool wheel_drop_left
+bool wheel_drop_right
+bool bumper_left
+bool bumper_right
