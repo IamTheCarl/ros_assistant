@@ -13,6 +13,10 @@ in
   imports = [
     <nixpkgs/nixos/modules/installer/sd-card/sd-image-aarch64.nix>
     ((ros_tarball) + "/modules")
+
+    # Raspberry Pi drivers are weird. Don't try to figure it out for yourself.
+    # Someone already figured it out for you. This makes the bluetooth work.
+    "${builtins.fetchGit { url = "https://github.com/NixOS/nixos-hardware.git"; }}/raspberry-pi/4"
   ];
 
   options = {
@@ -63,6 +67,14 @@ in
         firewall.enable = false;
       };
 
+    # Bluetooth
+    hardware.raspberry-pi."4".bluetooth.enable = true;
+    hardware.bluetooth =
+      {
+        enable = true;
+        powerOnBoot = true;
+      };
+
     # SSH
     systemd.services.sshd.wantedBy = lib.mkForce [ "multi-user.target" ];
     services.openssh.enable = true;
@@ -73,9 +85,12 @@ in
     users.extraUsers.root.openssh.authorizedKeys.keys = getSshKeys "IamTheCarl";
 
     # Install system packages.
+    # None of these are necessary for autonomy to run. They are just debug tools.
     environment.systemPackages = [
       pkgs.neovim
       pkgs.htop
+      pkgs.bluez
+      pkgs.linuxConsoleTools
       (ros_pkgs.rosPackages.humble.buildEnv {
         paths = [
           ros_pkgs.rosPackages.humble.ros-core
@@ -83,8 +98,12 @@ in
       })
     ];
 
-    # Let ROS access serial interfaces.
-    users.groups.dialout.members = [ "ros" ];
+    users.groups = {
+      # Let ROS access serial interfaces.
+      dialout.members = [ "ros" ];
+      # Let ROS access human input devices (specifically, game pads)
+      input.members = [ "ros" ];
+    };
 
     services.ros2 = {
       enable = true;
@@ -107,20 +126,20 @@ in
             serial_device = "\"/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DA01NM8I-if00-port0\"";
           };
         };
-        # # Provides joystick messages from a locally connected joystick.
-        # joy = {
-        #   package = "joy";
-        #   env = (ros_pkgs.rosPackages.humble.buildEnv {
-        #     paths = [
-        #       ros_pkgs.rosPackages.humble.ros-core
-        #       ros_pkgs.rosPackages.humble.joy
-        #     ];
-        #   });
-        #   node = "joy_node";
-        #   args = [ ];
-        #   rosArgs = [ ];
-        #   params = { };
-        # };
+        # Provides joystick messages from a locally connected joystick.
+        joy = {
+          package = "joy";
+          env = (ros_pkgs.rosPackages.humble.buildEnv {
+            paths = [
+              ros_pkgs.rosPackages.humble.ros-core
+              ros_pkgs.rosPackages.humble.joy
+            ];
+          });
+          node = "joy_node";
+          args = [ ];
+          rosArgs = [ ];
+          params = { };
+        };
         # Converts Joystick messages into velocity commands.
         teleop-twist-joy = {
           package = "teleop_twist_joy";
