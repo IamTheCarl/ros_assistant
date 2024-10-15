@@ -63,8 +63,7 @@ in
         networkmanager.enable = true;
         hostName = "rosetta";
 
-        # TODO re-enable firewall.
-        firewall.enable = false;
+        firewall.enable = true;
       };
 
     # Bluetooth
@@ -77,8 +76,13 @@ in
 
     # SSH
     systemd.services.sshd.wantedBy = lib.mkForce [ "multi-user.target" ];
-    services.openssh.enable = true;
-    services.openssh.settings.PermitRootLogin = "yes";
+    services.openssh = {
+      enable = true;
+      settings = {
+        # Needed to push updates.
+        PermitRootLogin = "yes";
+      };
+    };
 
     # Grabs your public keys from Github so you can log in.
     # Replace "IamTheCarl" with your github username, unless you want me logging into your Pi (I'd rather not).
@@ -91,6 +95,7 @@ in
       pkgs.htop
       pkgs.bluez
       pkgs.linuxConsoleTools
+      (import ../../../../dds_bridge { pkgs = pkgs; })
       (ros_pkgs.rosPackages.humble.buildEnv {
         paths = [
           ros_pkgs.rosPackages.humble.ros-core
