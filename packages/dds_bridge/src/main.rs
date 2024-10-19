@@ -1,39 +1,19 @@
 use anyhow::{bail, Context, Result};
-use bytes::Bytes;
-use futures::StreamExt;
-use rustdds::{
-    policy::Reliability, qos::HasQoSPolicy, DomainParticipant, DomainParticipantBuilder,
-    DomainParticipantStatusEvent, Keyed, QosPolicies, QosPolicyBuilder, StatusEvented, Subscriber,
-    TopicKind,
-};
+use futures::Stream;
+use hashbrown::{HashMap, HashSet};
+use r2r::{Node, PublisherUntyped, QosProfile};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{
-    collections::{HashMap, HashSet},
-    io::IsTerminal,
-    sync::Arc,
-    time::Duration,
-};
+use std::{io::IsTerminal, time::Duration};
 use tokio::{
-    io::{self, AsyncReadExt, AsyncWriteExt},
+    io::{self, AsyncReadExt, AsyncWriteExt, Stdin, Stdout},
     signal::unix::{signal, SignalKind},
     sync::mpsc,
+    time::MissedTickBehavior,
 };
-
-const TOPIC_LOOKUP_TIMEOUT_SECONDS: u64 = 15;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     colog::init();
-
-    let domain = match std::env::var("ROS_DOMAIN_ID") {
-        Ok(domain) => domain
-            .parse::<u16>()
-            .context("Failed to parse ROS_DOMAIN_ID as a 16bit unsigned integer")?,
-        Err(error) => match error {
-            std::env::VarError::NotPresent => 0, // Use the default.
-            std::env::VarError::NotUnicode(_) => bail!("ROS_DOMAIN_ID is not unicode encoded"),
-        },
-    };
 
     let mut output = io::stdout();
     let mut input = io::stdin();
@@ -42,18 +22,20 @@ async fn main() -> Result<()> {
         bail!("Refusing to output binary data to terminal");
     }
 
+    log::info!("Starting bridge.");
+
     start_communications(&mut output, &mut input)
         .await
         .context("Failed to start communications")?;
 
-    bridge_dds(domain, &mut output, input)
+    tunnel_ros(&mut output, input)
         .await
         .context("Failed to bridge DDS")?;
 
     // Tell the remote we are shutting down.
     let mut buffer = Vec::new();
     output
-        .send_message(&mut buffer, &Command::Hangup)
+        .send_message(&mut buffer, &Message::Hangup)
         .await
         .ok();
 
@@ -67,7 +49,7 @@ macro_rules! fatal_hangup {
         $output
             .send_message(
                 $buffer,
-                &Command::FatalError {
+                &Message::FatalError {
                     message: $message.into(),
                 },
             )
@@ -78,55 +60,50 @@ macro_rules! fatal_hangup {
     };
 }
 
-async fn start_communications(
-    mut output: impl AsyncWriteExt + Unpin,
-    mut input: impl AsyncReadExt + Unpin,
-) -> Result<()> {
+async fn start_communications(output: &mut Stdout, input: &mut Stdin) -> Result<()> {
     let mut buffer = Vec::new();
+    const VERSION: u16 = 0;
 
     output
-        .send_message(&mut buffer, &Header { version: 0 })
+        .send_message(&mut buffer, &Header { version: VERSION })
         .await
         .context("Failed to send protocol version")?;
 
-    let dont_forget_to_uncomment_this = 0;
-    // let remote_header: Header = input
-    //     .recv_message(&mut buffer)
-    //     .await
-    //     .context("Failed to receive remote version")?;
+    let remote_header: Header = input
+        .recv_message(&mut buffer)
+        .await
+        .context("Failed to receive remote version")?;
 
-    // if remote_header.version != 0 {
-    //     fatal_hangup!(output, &mut buffer, "Remote version incompatible.");
-    // }
+    if remote_header.version != VERSION {
+        fatal_hangup!(output, &mut buffer, "Remote version incompatible.");
+    }
+
+    log::info!("Handshake with remote peer complete.");
 
     Ok(())
 }
 
-async fn bridge_dds(
-    domain: u16,
-    mut output: impl AsyncWriteExt + Unpin,
-    mut input: impl AsyncReadExt + Unpin + Send + 'static,
-) -> Result<()> {
-    let domain_participant = Arc::new(
-        DomainParticipantBuilder::new(domain)
-            .build()
-            .context("Failed to build DDS participant")?,
-    );
+async fn tunnel_ros(output: &mut Stdout, mut input: Stdin) -> Result<()> {
+    let ctx = r2r::Context::create().context("Failed to create ROS context")?;
+    let mut node =
+        r2r::Node::create(ctx, "ros_tunnel", "ros_tunnel").context("Failed to create ROS node")?;
 
-    let status_listener = domain_participant.status_listener();
-    let mut status_stream = status_listener.as_async_status_stream();
+    let mut update_interval = tokio::time::interval(Duration::from_secs(10));
+    update_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+    update_interval.reset_immediately(); // We want to update as soon as we're ready.
 
     let mut sig_terminate =
         signal(SignalKind::terminate()).context("Failed to hook into terminate signal.")?;
     let mut sig_interrupt =
         signal(SignalKind::interrupt()).context("Failed to hook into interrupt signal.")?;
 
+    let mut output_buffer = Vec::new();
     let mut input_buffer = Vec::new();
 
     let (message_tx, mut message_rx) = mpsc::channel(10);
     let message_reception = tokio::spawn(async move {
         loop {
-            let message = input.recv_message::<Command>(&mut input_buffer).await;
+            let message = input.recv_message::<Message>(&mut input_buffer).await;
             if let Err(error) = message_tx.send(message).await {
                 log::error!("Reception error: {error}");
                 break;
@@ -134,75 +111,37 @@ async fn bridge_dds(
         }
     });
 
-    let qos = QosPolicyBuilder::new()
-        .reliability(Reliability::BestEffort)
-        .build();
-    let subscriber = domain_participant.create_subscriber(&qos).unwrap();
-
-    let mut output_buffer = Vec::new();
-
-    let mut publishing_to_local_topics = HashMap::new();
-    // let mut local_topic_subscriptions = HashMap::new();
-
-    let (new_subscription_tx, new_subscription_rx) = mpsc::channel(10);
+    let mut known_topics = HashMap::new();
+    let mut subscribers = HashMap::new();
+    let mut publishers = HashMap::new();
+    let mut currently_subscribed = HashSet::new();
 
     loop {
         tokio::select! {
-        _ = sig_terminate.recv() => {
-            break;
-        }
-        _ = sig_interrupt.recv() => {
-            break;
-        }
-        command = message_rx.recv() => {
-            let command = command.context("Message queue closed")?.context("Failed to receive message")?;
-            match command {
-                Command::FatalError { message } => bail!("Fatal error from remote: {}", message),
-                Command::Hangup => break,
-                Command::DetectedTopic { name, type_name, qos, topic_kind } => {
-                    match domain_participant.create_topic(name.clone(), type_name, &qos, topic_kind.into()) {
-                        Ok(topic) => { publishing_to_local_topics.insert(name, topic); },
-                        Err(error) => log::error!("Failed to create topic: {error}"),
-                    }
-                },
-                Command::LostTopic { name } => {
-                    publishing_to_local_topics.remove(&name);
-                },
+            _ = sig_terminate.recv() => {
+                break;
             }
-        }
-        status_update = status_stream.next() => {
-            let status_update = status_update.unwrap();
-            match status_update {
-                DomainParticipantStatusEvent::TopicDetected { name, .. } => {
-                    // Looking up a topic is a blocking operation.
-                    let domain_participant = domain_participant.clone();
-                    let new_subscription_tx = new_subscription_tx.clone();
-                    let name = name.clone();
+            _ = sig_interrupt.recv() => {
+                break;
+            }
+            message = message_rx.recv() => {
+                let message = message.context("Message queue closed")?.context("Failed to receive message")?;
+                let control_flow = process_command(
+                        &mut node,
+                        &known_topics,
+                        &mut subscribers,
+                        &mut publishers,
+                        message)
+                    .context("Failed to process message from remote")?;
 
-                    tokio::task::spawn_blocking(|| lookup_topic(domain_participant, new_subscription_tx, name));
-
-
-                    // local_topic_subscriptions.insert(topic.topic_name().clone(), todo!());
-
-                    // let qos = topic.topic_data.qos();
-                    // output.send_message(&mut output_buffer, &Command::DetectedTopic {
-                    //     name: topic.topic_data.name,
-                    //     type_name: topic.topic_data.type_name,
-                    //     qos,
-                    //     topic_kind: if topic.topic_data.key.is_some() {
-                    //         SerializableTopicKind::WithKey
-                    //     } else {
-                    //         SerializableTopicKind::NoKey
-                    //     }
-                    // }).await?;
-                }
-                DomainParticipantStatusEvent::TopicLost { name } => {
-                    output.send_message(&mut output_buffer, &Command::LostTopic { name }).await?;
-                }
-                _ => {
-                    // We don't care about anything else.
+                match control_flow {
+                    ControlFlow::Continue => continue,
+                    ControlFlow::Exit => break,
                 }
             }
+            _ = update_interval.tick() => {
+                scan_for_topics(&mut node, output, &mut output_buffer, &mut known_topics).await?;
+                scan_for_subscriptions(output, &mut output_buffer, &publishers, &mut currently_subscribed).await?;
             }
         }
     }
@@ -213,92 +152,185 @@ async fn bridge_dds(
     Ok(())
 }
 
-fn lookup_topic(
-    domain_participant: Arc<DomainParticipant>,
-    sender: mpsc::Sender<Subscriber>,
-    name: String,
-) {
-    fn trampoline(
-        domain_participant: Arc<DomainParticipant>,
-        sender: mpsc::Sender<Subscriber>,
-        name: &str,
-    ) -> Result<()> {
-        let topic = domain_participant
-            .find_topic(
-                name.as_ref(),
-                Duration::from_secs(TOPIC_LOOKUP_TIMEOUT_SECONDS),
-            )
-            .context("Failed to create topic object after finding the topic")?
-            .context("Topic is not available")?;
+enum ControlFlow {
+    Continue,
+    Exit,
+}
 
-        log::debug!("FOUND TOPIC: {topic:?}");
-        match topic.kind() {
-            TopicKind::NoKey => todo!(),
-            TopicKind::WithKey => {
-                // ROS2 does not support keyed topics (as of writing this)
-                // We'll just ignore this.
+fn process_command(
+    node: &mut Node,
+    known_topics: &HashMap<String, String>,
+    subscribers: &mut HashMap<String, Box<dyn Stream<Item = Vec<u8>> + Unpin>>,
+    publishers: &mut HashMap<String, PublisherUntyped>,
+    message: Message,
+) -> Result<ControlFlow> {
+    match message {
+        Message::FatalError { message } => bail!("Fatal error from remote: {message}"),
+        Message::Hangup => return Ok(ControlFlow::Exit),
+        Message::NewTopic { name, message_type } => {
+            if !publishers.contains_key(&name) {
+                let publisher = node
+                    .create_publisher_untyped(&name, &message_type, QosProfile::default())
+                    .context("Failed to create publisher")?;
+                publishers.insert(name, publisher);
+            } else {
+                log::warn!("Remote has informed us of topic `{name}` being created twice.");
             }
         }
-
-        Ok(())
+        Message::SetTopicSubscribed { name, subscribed } => {
+            if subscribed {
+                // Remote wants to subscribe, which means we need to subscribe.
+                if let Some(topic_type) = known_topics.get(&name) {
+                    match node.subscribe_raw(&name, topic_type, QosProfile::default()) {
+                        Ok(subscription) => {
+                            subscribers.insert(name, Box::new(subscription));
+                        }
+                        Err(error) => {
+                            log::error!("Failed to subscribe to topic `{name}`: {error:?}");
+                        }
+                    }
+                } else {
+                    log::error!("Remote wanted to subscribe to unknown topic `{name}`");
+                }
+            } else {
+                // Remote wants to unsubscribe, which means we need to unsubscribe.
+                if subscribers.remove(&name).is_none() {
+                    log::error!("Remote wanted to unsubscribe from a topic `{name}`, but we were never subscribed to that.");
+                }
+            }
+        }
+        Message::DeletedTopic { name } => {
+            if publishers.remove(&name).is_none() {
+                log::warn!("Remote has informed us of the removal of topic `{name}`, but we were never aware of such a topic.");
+            }
+        }
     }
 
-    if let Err(error) = trampoline(domain_participant, sender, name.as_ref()) {
-        log::error!("Failed to look up topic `{name}`: {error:?}");
+    Ok(ControlFlow::Continue)
+}
+
+async fn scan_for_topics(
+    node: &mut Node,
+    output: &mut Stdout,
+    buffer: &mut Vec<u8>,
+    known_topics: &mut HashMap<String, String>,
+) -> Result<()> {
+    match node.get_topic_names_and_types() {
+        Ok(topics) => {
+            log::info!("Topics: {topics:?}");
+
+            // Remove dead topics.
+            for (name, _message_type) in
+                known_topics.extract_if(|name, _message_type| !topics.contains_key(name))
+            {
+                // This loop gets all of the entries that were removed.
+                output
+                    .send_message(buffer, &Message::DeletedTopic { name })
+                    .await
+                    .context("Failed to send message removal notice.")?;
+            }
+
+            // Look for new topics.
+            for (name, mut types) in topics {
+                if !known_topics.contains_key(&name) {
+                    // This is a new topic.
+                    // See if we have type info. We can only subscribe to one type, so we will only inform our remote peer of
+                    // the first type we see.
+                    if let Some(message_type) = types.pop() {
+                        known_topics.insert(name.clone(), message_type.clone());
+                    } else {
+                        log::error!("Topic {name} does not have a type.");
+                    }
+                }
+            }
+        }
+        Err(error) => log::error!("Failed to poll for new topics: {error}"),
     }
+
+    Ok(())
+}
+
+async fn scan_for_subscriptions(
+    output: &mut Stdout,
+    buffer: &mut Vec<u8>,
+
+    publishers: &HashMap<String, PublisherUntyped>,
+    currently_subscribed: &mut HashSet<String>,
+) -> Result<()> {
+    for (name, publisher) in publishers.iter() {
+        match publisher.get_inter_process_subscription_count() {
+            Ok(inter_process_subscription_count) => {
+                let is_subscribed_to = inter_process_subscription_count > 0;
+                let was_subscribed_to = currently_subscribed.contains(name);
+
+                match (is_subscribed_to, was_subscribed_to) {
+                    (true, false) => {
+                        // We need to subscribe to this topic.
+                        output
+                            .send_message(
+                                buffer,
+                                &Message::SetTopicSubscribed {
+                                    name: name.clone(),
+                                    subscribed: true,
+                                },
+                            )
+                            .await
+                            .context("Failed to send subscription request.")?;
+
+                        currently_subscribed.insert(name.clone());
+                    }
+                    (false, true) => {
+                        // We need to unsubscribe from this topic.
+                        output
+                            .send_message(
+                                buffer,
+                                &Message::SetTopicSubscribed {
+                                    name: name.clone(),
+                                    subscribed: false,
+                                },
+                            )
+                            .await
+                            .context("Failed to send unsubscribe request.")?;
+
+                        currently_subscribed.remove(name);
+                    }
+                    _ => {
+                        // Nothing needs to be done here.
+                    }
+                }
+            }
+            Err(error) => {
+                log::error!(
+                    "Failed to get inter process subscription count for topic `{name}`: {error:?}"
+                )
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[derive(Serialize, Deserialize)]
 struct Header {
-    version: usize,
+    version: u16,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-enum Command {
+enum Message {
     // Something went wrong and we cannot recover. Communications are expected to terminate after this.
-    FatalError {
-        message: String,
-    },
+    FatalError { message: String },
 
     // Remote is closing, and there is nothing unexpected about that.
     Hangup,
 
-    // A new DDS topic has appeared.
-    DetectedTopic {
-        name: String,
-        type_name: String,
-        qos: QosPolicies,
-        topic_kind: SerializableTopicKind,
-    },
+    // A new topic has appeared.
+    NewTopic { name: String, message_type: String },
 
-    // A DDS topic has disappeared.
-    LostTopic {
-        name: String,
-    },
-}
+    // Inform the remote that a topic has been subscribed to.
+    SetTopicSubscribed { name: String, subscribed: bool },
 
-#[derive(Debug, Serialize, Deserialize)]
-enum SerializableTopicKind {
-    NoKey,
-    WithKey,
-}
-
-impl From<TopicKind> for SerializableTopicKind {
-    fn from(value: TopicKind) -> Self {
-        match value {
-            TopicKind::NoKey => Self::NoKey,
-            TopicKind::WithKey => Self::WithKey,
-        }
-    }
-}
-
-impl From<SerializableTopicKind> for TopicKind {
-    fn from(value: SerializableTopicKind) -> Self {
-        match value {
-            SerializableTopicKind::NoKey => Self::NoKey,
-            SerializableTopicKind::WithKey => Self::WithKey,
-        }
-    }
+    // A topic has disappeared.
+    DeletedTopic { name: String },
 }
 
 type LengthIndicator = u32;
@@ -331,10 +363,13 @@ where
             .await
             .context("Failed to send message")?;
 
+        self.flush()
+            .await
+            .context("Failed to flush output buffer")?;
+
         Ok(())
     }
 }
-
 trait RecvMessage {
     async fn recv_message<M>(&mut self, buffer: &mut Vec<u8>) -> Result<M>
     where

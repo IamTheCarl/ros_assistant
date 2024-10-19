@@ -18,7 +18,6 @@ pkgs.mkShell {
       {
         paths = [
           pkgs.rosPackages.humble.ros-core
-          pkgs.rosPackages.humble.joy
         ];
       })
   ];
