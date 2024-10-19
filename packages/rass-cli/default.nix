@@ -21,8 +21,13 @@ rust_platform.buildRustPackage rec {
     "--skip=host_config::test::read_config"
   ];
 
-  propigatedBuildInputs = [
+  nativeBuildInputs = [
+    pkgs.makeWrapper
+  ];
+
+  buildInputs = [
     pkgs.nix
+    pkgs.nixos-rebuild
     pkgs.openssh
   ];
 
@@ -35,5 +40,7 @@ rust_platform.buildRustPackage rec {
 
   postInstall = ''
     mv $out/bin/cli $out/bin/rass
+    wrapProgram $out/bin/rass \
+      --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin
   '';
 }
