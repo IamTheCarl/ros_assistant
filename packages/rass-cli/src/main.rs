@@ -10,6 +10,7 @@ mod deploy;
 mod firewall;
 mod host_config;
 mod ssh;
+mod tunnel;
 
 fn main() {
     let args = argh::from_env();
@@ -33,6 +34,7 @@ fn application(args: arguments::RosAssistant) -> Result<()> {
         }
         arguments::SubCommand::Ssh(ssh_args) => ssh::ssh(ssh_args).context("Failed to ssh to host"),
         arguments::SubCommand::Firewall(firewall_args) => firewall(firewall_args),
+        arguments::SubCommand::Tunnel(tunnel_args) => tunnel::tunnel(tunnel_args),
     }
 }
 

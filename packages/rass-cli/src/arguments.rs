@@ -22,6 +22,7 @@ pub enum SubCommand {
     Deploy(Deploy),
     Ssh(SshCommand),
     Firewall(firewall::Command),
+    Tunnel(TunnelCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -134,4 +135,17 @@ pub mod firewall {
     /// Reset the firewalls to their original state.
     #[argh(subcommand, name = "reset")]
     pub struct Reset {}
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Tunnel ROS traffic from the robot to your local system.
+#[argh(subcommand, name = "tunnel")]
+pub struct TunnelCommand {
+    #[argh(option)]
+    /// specify a directory to be used as the project root (defaults to the current directory)
+    pub project_root: Option<PathBuf>,
+
+    #[argh(positional)]
+    /// the host within the robot to tunnel from
+    pub host: Option<String>,
 }

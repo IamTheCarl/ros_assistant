@@ -7,6 +7,8 @@ let
   };
 
   cargo_toml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+
+  ros_tunnel = (import ../dds_bridge { pkgs = pkgs; });
 in
 rust_platform.buildRustPackage rec {
   pname = "rass-cli";
@@ -29,6 +31,7 @@ rust_platform.buildRustPackage rec {
     pkgs.nix
     pkgs.nixos-rebuild
     pkgs.openssh
+    ros_tunnel
   ];
 
   meta = with pkgs.lib; {
@@ -41,6 +44,6 @@ rust_platform.buildRustPackage rec {
   postInstall = ''
     mv $out/bin/cli $out/bin/rass
     wrapProgram $out/bin/rass \
-      --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin
+      --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin:${ros_tunnel}/bin
   '';
 }
