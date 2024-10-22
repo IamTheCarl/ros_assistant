@@ -5,5 +5,6 @@ in
 pkgs.mkShell {
   buildInputs = [
     rust
+    pkgs.crate2nix
   ];
 }

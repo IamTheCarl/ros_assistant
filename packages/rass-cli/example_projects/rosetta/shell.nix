@@ -14,7 +14,6 @@ pkgs.mkShell {
           (import ../../../create_bridge_interface { pkgs = pkgs; })
         ];
       })
-    pkgs.sshuttle
   ];
 
   shellHook = ''

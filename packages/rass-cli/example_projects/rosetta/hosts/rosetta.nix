@@ -95,10 +95,10 @@ in
       pkgs.htop
       pkgs.bluez
       pkgs.linuxConsoleTools
-      (import ../../../../dds_bridge { pkgs = pkgs; })
       (ros_pkgs.rosPackages.humble.buildEnv {
         paths = [
           ros_pkgs.rosPackages.humble.ros-core
+          (import ../../../../dds_bridge { pkgs = pkgs; })
         ];
       })
     ];
