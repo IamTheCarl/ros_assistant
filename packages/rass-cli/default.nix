@@ -7,7 +7,7 @@ let
     rustc = rust;
   };
 
-  ros_tunnel = (import ../dds_bridge { pkgs = pkgs; });
+  ros_tunnel = (import ../ros_tunnel { pkgs = pkgs; });
 
   cargo_nix = pkgs.callPackage ./Cargo.nix { };
   package = cargo_nix.rootCrate.build;

@@ -98,7 +98,7 @@ in
       (ros_pkgs.rosPackages.humble.buildEnv {
         paths = [
           ros_pkgs.rosPackages.humble.ros-core
-          (import ../../../../dds_bridge { pkgs = pkgs; })
+          (import ../../../../ros_tunnel { pkgs = pkgs; })
         ];
       })
     ];

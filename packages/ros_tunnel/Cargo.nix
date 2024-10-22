@@ -33,7 +33,7 @@ rec {
   #
 
   rootCrate = rec {
-    packageId = "dds_bridge";
+    packageId = "ros_tunnel";
 
     # Use this attribute to refer to the derivation building your root crate package.
     # You can override the features with rootCrate.build.override { features = [ "default" "feature1" ... ]; }.
@@ -49,10 +49,10 @@ rec {
   # You can override the features with
   # workspaceMembers."${crateName}".build.override { features = [ "default" "feature1" ... ]; }.
   workspaceMembers = {
-    "dds_bridge" = rec {
-      packageId = "dds_bridge";
+    "ros_tunnel" = rec {
+      packageId = "ros_tunnel";
       build = internal.buildRustCrateWithFeatures {
-        packageId = "dds_bridge";
+        packageId = "ros_tunnel";
       };
 
       # Debug support which might change between releases.
@@ -795,64 +795,6 @@ rec {
           "rand_core" = [ "dep:rand_core" ];
         };
         resolvedDefaultFeatures = [ "std" ];
-      };
-      "dds_bridge" = rec {
-        crateName = "dds_bridge";
-        version = "0.1.0";
-        edition = "2021";
-        crateBin = [
-          {
-            name = "dds_bridge";
-            path = "src/main.rs";
-            requiredFeatures = [ ];
-          }
-        ];
-        src = lib.cleanSourceWith { filter = sourceFilter;  src = ./.; };
-        dependencies = [
-          {
-            name = "anyhow";
-            packageId = "anyhow";
-          }
-          {
-            name = "bincode";
-            packageId = "bincode";
-          }
-          {
-            name = "bytes";
-            packageId = "bytes";
-          }
-          {
-            name = "colog";
-            packageId = "colog";
-          }
-          {
-            name = "futures";
-            packageId = "futures";
-          }
-          {
-            name = "hashbrown";
-            packageId = "hashbrown";
-          }
-          {
-            name = "log";
-            packageId = "log";
-          }
-          {
-            name = "r2r";
-            packageId = "r2r";
-          }
-          {
-            name = "serde";
-            packageId = "serde";
-            features = [ "derive" ];
-          }
-          {
-            name = "tokio";
-            packageId = "tokio";
-            features = [ "full" ];
-          }
-        ];
-
       };
       "digest" = rec {
         crateName = "digest";
@@ -2785,6 +2727,64 @@ rec {
           "unicode" = [ "unicode-age" "unicode-bool" "unicode-case" "unicode-gencat" "unicode-perl" "unicode-script" "unicode-segment" ];
         };
         resolvedDefaultFeatures = [ "default" "std" "unicode" "unicode-age" "unicode-bool" "unicode-case" "unicode-gencat" "unicode-perl" "unicode-script" "unicode-segment" ];
+      };
+      "ros_tunnel" = rec {
+        crateName = "ros_tunnel";
+        version = "0.1.0";
+        edition = "2021";
+        crateBin = [
+          {
+            name = "ros_tunnel";
+            path = "src/main.rs";
+            requiredFeatures = [ ];
+          }
+        ];
+        src = lib.cleanSourceWith { filter = sourceFilter;  src = ./.; };
+        dependencies = [
+          {
+            name = "anyhow";
+            packageId = "anyhow";
+          }
+          {
+            name = "bincode";
+            packageId = "bincode";
+          }
+          {
+            name = "bytes";
+            packageId = "bytes";
+          }
+          {
+            name = "colog";
+            packageId = "colog";
+          }
+          {
+            name = "futures";
+            packageId = "futures";
+          }
+          {
+            name = "hashbrown";
+            packageId = "hashbrown";
+          }
+          {
+            name = "log";
+            packageId = "log";
+          }
+          {
+            name = "r2r";
+            packageId = "r2r";
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            features = [ "derive" ];
+          }
+          {
+            name = "tokio";
+            packageId = "tokio";
+            features = [ "full" ];
+          }
+        ];
+
       };
       "rustc-demangle" = rec {
         crateName = "rustc-demangle";

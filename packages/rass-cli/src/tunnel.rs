@@ -55,7 +55,7 @@ pub(crate) fn tunnel(args: TunnelCommand) -> Result<()> {
     ssh_command.arg("-F");
     ssh_command.arg(ssh_config);
     ssh_command.arg(host);
-    ssh_command.arg("dds_bridge"); // TODO this DDS bridge also needs to be renamed.
+    ssh_command.arg("ros_tunnel");
 
     ssh_command
         .stdout(Stdio::piped())
@@ -67,8 +67,7 @@ pub(crate) fn tunnel(args: TunnelCommand) -> Result<()> {
     let mut ssh_out = ssh.stdout.take().unwrap();
     let ssh_stderr = ssh.stderr.take().unwrap();
 
-    // TODO I want to rename that package.
-    let mut tunnel_command = Command::new("dds_bridge");
+    let mut tunnel_command = Command::new("ros_tunnel");
     tunnel_command
         .stdout(Stdio::piped())
         .stdin(Stdio::piped())
