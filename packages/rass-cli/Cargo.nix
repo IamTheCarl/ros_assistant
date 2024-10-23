@@ -281,7 +281,7 @@ rec {
           }
           {
             name = "syn";
-            packageId = "syn";
+            packageId = "syn 2.0.79";
           }
         ];
 
@@ -322,6 +322,19 @@ rec {
           "serde" = [ "dep:serde" ];
         };
         resolvedDefaultFeatures = [ "std" ];
+      };
+      "byteorder" = rec {
+        crateName = "byteorder";
+        version = "1.5.0";
+        edition = "2021";
+        sha256 = "0jzncxyf404mwqdbspihyzpkndfgda450l0893pz5xj685cg5l0z";
+        authors = [
+          "Andrew Gallant <jamslam@gmail.com>"
+        ];
+        features = {
+          "default" = [ "std" ];
+        };
+        resolvedDefaultFeatures = [ "default" "std" ];
       };
       "cfg-if" = rec {
         crateName = "cfg-if";
@@ -366,6 +379,14 @@ rec {
           {
             name = "colog";
             packageId = "colog";
+          }
+          {
+            name = "dns-lookup";
+            packageId = "dns-lookup";
+          }
+          {
+            name = "local-ip-address";
+            packageId = "local-ip-address";
           }
           {
             name = "log";
@@ -448,6 +469,52 @@ rec {
         ];
         features = {
         };
+      };
+      "dns-lookup" = rec {
+        crateName = "dns-lookup";
+        version = "2.0.4";
+        edition = "2018";
+        sha256 = "1z74n2zij2gahycabm0gkmkyx574h76gwk7sz93yqpr3qa3n0xp5";
+        libName = "dns_lookup";
+        authors = [
+          "Josh Driver <keeperofdakeys@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "cfg-if";
+            packageId = "cfg-if";
+          }
+          {
+            name = "libc";
+            packageId = "libc";
+            target = { target, features }: (target."unix" or false);
+          }
+          {
+            name = "socket2";
+            packageId = "socket2";
+          }
+          {
+            name = "windows-sys";
+            packageId = "windows-sys 0.48.0";
+            target = { target, features }: (target."windows" or false);
+            features = [ "Win32_Networking_WinSock" "Win32_Foundation" ];
+          }
+        ];
+
+      };
+      "either" = rec {
+        crateName = "either";
+        version = "1.13.0";
+        edition = "2018";
+        sha256 = "1w2c1mybrd7vljyxk77y9f4w9dyjrmp3yp82mk7bcm8848fazcb0";
+        authors = [
+          "bluss"
+        ];
+        features = {
+          "default" = [ "use_std" ];
+          "serde" = [ "dep:serde" ];
+        };
+        resolvedDefaultFeatures = [ "default" "use_std" ];
       };
       "env_filter" = rec {
         crateName = "env_filter";
@@ -632,7 +699,7 @@ rec {
           "rustc-std-workspace-core" = [ "dep:rustc-std-workspace-core" ];
           "use_std" = [ "std" ];
         };
-        resolvedDefaultFeatures = [ "extra_traits" "std" ];
+        resolvedDefaultFeatures = [ "default" "extra_traits" "std" ];
       };
       "linux-raw-sys" = rec {
         crateName = "linux-raw-sys";
@@ -650,6 +717,39 @@ rec {
           "rustc-dep-of-std" = [ "core" "compiler_builtins" "no_std" ];
         };
         resolvedDefaultFeatures = [ "elf" "errno" "general" "ioctl" "no_std" ];
+      };
+      "local-ip-address" = rec {
+        crateName = "local-ip-address";
+        version = "0.6.3";
+        edition = "2021";
+        sha256 = "10hpiqpwsm2f2pip0pynsibzaw0f6mc5xhacr27pxlpqc5awys9n";
+        libName = "local_ip_address";
+        authors = [
+          "Esteban Borai <estebanborai@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "libc";
+            packageId = "libc";
+            target = { target, features }: (target."unix" or false);
+          }
+          {
+            name = "neli";
+            packageId = "neli";
+            target = { target, features }: ("linux" == target."os" or null);
+          }
+          {
+            name = "thiserror";
+            packageId = "thiserror";
+          }
+          {
+            name = "windows-sys";
+            packageId = "windows-sys 0.59.0";
+            target = { target, features }: (target."windows" or false);
+            features = [ "Win32_Foundation" "Win32_Networking_WinSock" "Win32_NetworkManagement_IpHelper" "Win32_NetworkManagement_Ndis" "Win32_System_Diagnostics_Debug" "Win32_System_Memory" ];
+          }
+        ];
+
       };
       "log" = rec {
         crateName = "log";
@@ -693,6 +793,74 @@ rec {
           "use_std" = [ "std" ];
         };
         resolvedDefaultFeatures = [ "alloc" "std" ];
+      };
+      "neli" = rec {
+        crateName = "neli";
+        version = "0.6.4";
+        edition = "2018";
+        sha256 = "0hzg86zg8rj14yklwm2r2yzg6w2wbnba8qfdpsrm0hb00sg2400i";
+        authors = [
+          "John Baublitz <john.m.baublitz@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "byteorder";
+            packageId = "byteorder";
+          }
+          {
+            name = "libc";
+            packageId = "libc";
+          }
+          {
+            name = "log";
+            packageId = "log";
+          }
+          {
+            name = "neli-proc-macros";
+            packageId = "neli-proc-macros";
+          }
+        ];
+        features = {
+          "async" = [ "tokio" ];
+          "tokio" = [ "dep:tokio" ];
+        };
+        resolvedDefaultFeatures = [ "default" ];
+      };
+      "neli-proc-macros" = rec {
+        crateName = "neli-proc-macros";
+        version = "0.1.3";
+        edition = "2018";
+        sha256 = "1m06j6vgy5zzr6dvnbpacpai6mgwwzd20h17hr3i67iv6x6ijs61";
+        procMacro = true;
+        libName = "neli_proc_macros";
+        authors = [
+          "John Baublitz <john.m.baublitz@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "either";
+            packageId = "either";
+          }
+          {
+            name = "proc-macro2";
+            packageId = "proc-macro2";
+          }
+          {
+            name = "quote";
+            packageId = "quote";
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            features = [ "derive" ];
+          }
+          {
+            name = "syn";
+            packageId = "syn 1.0.109";
+            features = [ "full" "extra-traits" ];
+          }
+        ];
+
       };
       "once_cell" = rec {
         crateName = "once_cell";
@@ -1073,7 +1241,7 @@ rec {
           }
           {
             name = "syn";
-            packageId = "syn";
+            packageId = "syn 2.0.79";
             usesDefaultFeatures = false;
             features = [ "clone-impls" "derive" "parsing" "printing" "proc-macro" ];
           }
@@ -1127,7 +1295,66 @@ rec {
         };
         resolvedDefaultFeatures = [ "default" "std" ];
       };
-      "syn" = rec {
+      "socket2" = rec {
+        crateName = "socket2";
+        version = "0.5.7";
+        edition = "2021";
+        sha256 = "070r941wbq76xpy039an4pyiy3rfj7mp7pvibf1rcri9njq5wc6f";
+        authors = [
+          "Alex Crichton <alex@alexcrichton.com>"
+          "Thomas de Zeeuw <thomasdezeeuw@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "libc";
+            packageId = "libc";
+            target = { target, features }: (target."unix" or false);
+          }
+          {
+            name = "windows-sys";
+            packageId = "windows-sys 0.52.0";
+            target = { target, features }: (target."windows" or false);
+            features = [ "Win32_Foundation" "Win32_Networking_WinSock" "Win32_System_IO" "Win32_System_Threading" "Win32_System_WindowsProgramming" ];
+          }
+        ];
+        features = {
+        };
+      };
+      "syn 1.0.109" = rec {
+        crateName = "syn";
+        version = "1.0.109";
+        edition = "2018";
+        sha256 = "0ds2if4600bd59wsv7jjgfkayfzy3hnazs394kz6zdkmna8l3dkj";
+        authors = [
+          "David Tolnay <dtolnay@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "proc-macro2";
+            packageId = "proc-macro2";
+            usesDefaultFeatures = false;
+          }
+          {
+            name = "quote";
+            packageId = "quote";
+            optional = true;
+            usesDefaultFeatures = false;
+          }
+          {
+            name = "unicode-ident";
+            packageId = "unicode-ident";
+          }
+        ];
+        features = {
+          "default" = [ "derive" "parsing" "printing" "clone-impls" "proc-macro" ];
+          "printing" = [ "quote" ];
+          "proc-macro" = [ "proc-macro2/proc-macro" "quote/proc-macro" ];
+          "quote" = [ "dep:quote" ];
+          "test" = [ "syn-test-suite/all-features" ];
+        };
+        resolvedDefaultFeatures = [ "clone-impls" "default" "derive" "extra-traits" "full" "parsing" "printing" "proc-macro" "quote" ];
+      };
+      "syn 2.0.79" = rec {
         crateName = "syn";
         version = "2.0.79";
         edition = "2021";
@@ -1201,6 +1428,48 @@ rec {
         ];
         features = {
         };
+      };
+      "thiserror" = rec {
+        crateName = "thiserror";
+        version = "1.0.65";
+        edition = "2021";
+        sha256 = "1mdkawq9l9p02zvq7y4py739rjk9wk2ha27mbsb3i6sdb7csn4ax";
+        authors = [
+          "David Tolnay <dtolnay@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "thiserror-impl";
+            packageId = "thiserror-impl";
+          }
+        ];
+
+      };
+      "thiserror-impl" = rec {
+        crateName = "thiserror-impl";
+        version = "1.0.65";
+        edition = "2021";
+        sha256 = "00l6gyrx6qlm1d7if3dcfl2sl0mg8k21caknkpk7glnb481pfwdf";
+        procMacro = true;
+        libName = "thiserror_impl";
+        authors = [
+          "David Tolnay <dtolnay@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "proc-macro2";
+            packageId = "proc-macro2";
+          }
+          {
+            name = "quote";
+            packageId = "quote";
+          }
+          {
+            name = "syn";
+            packageId = "syn 2.0.79";
+          }
+        ];
+
       };
       "toposort-scc" = rec {
         crateName = "toposort-scc";
@@ -1531,7 +1800,7 @@ rec {
           "Win32_Web" = [ "Win32" ];
           "Win32_Web_InternetExplorer" = [ "Win32_Web" ];
         };
-        resolvedDefaultFeatures = [ "Win32" "Win32_Foundation" "Win32_System" "Win32_System_Console" "default" ];
+        resolvedDefaultFeatures = [ "Win32" "Win32_Foundation" "Win32_Networking" "Win32_Networking_WinSock" "Win32_System" "Win32_System_Console" "default" ];
       };
       "windows-sys 0.52.0" = rec {
         crateName = "windows-sys";
@@ -1779,7 +2048,7 @@ rec {
           "Win32_Web" = [ "Win32" ];
           "Win32_Web_InternetExplorer" = [ "Win32_Web" ];
         };
-        resolvedDefaultFeatures = [ "Win32" "Win32_Foundation" "Win32_NetworkManagement" "Win32_NetworkManagement_IpHelper" "Win32_Networking" "Win32_Networking_WinSock" "Win32_System" "Win32_System_Console" "Win32_System_Diagnostics" "Win32_System_Diagnostics_Debug" "Win32_System_Threading" "default" ];
+        resolvedDefaultFeatures = [ "Win32" "Win32_Foundation" "Win32_NetworkManagement" "Win32_NetworkManagement_IpHelper" "Win32_Networking" "Win32_Networking_WinSock" "Win32_System" "Win32_System_Console" "Win32_System_Diagnostics" "Win32_System_Diagnostics_Debug" "Win32_System_IO" "Win32_System_Threading" "Win32_System_WindowsProgramming" "default" ];
       };
       "windows-sys 0.59.0" = rec {
         crateName = "windows-sys";
@@ -2038,7 +2307,7 @@ rec {
           "Win32_Web" = [ "Win32" ];
           "Win32_Web_InternetExplorer" = [ "Win32_Web" ];
         };
-        resolvedDefaultFeatures = [ "Win32" "Win32_Foundation" "Win32_Storage" "Win32_Storage_FileSystem" "default" ];
+        resolvedDefaultFeatures = [ "Win32" "Win32_Foundation" "Win32_NetworkManagement" "Win32_NetworkManagement_IpHelper" "Win32_NetworkManagement_Ndis" "Win32_Networking" "Win32_Networking_WinSock" "Win32_Storage" "Win32_Storage_FileSystem" "Win32_System" "Win32_System_Diagnostics" "Win32_System_Diagnostics_Debug" "Win32_System_Memory" "default" ];
       };
       "windows-targets 0.48.5" = rec {
         crateName = "windows-targets";
