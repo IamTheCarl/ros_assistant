@@ -123,6 +123,7 @@ pub mod firewall {
     pub enum SubCommand {
         Disable(Disable),
         Reset(Reset),
+        Pierce(Pierce),
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
@@ -134,4 +135,15 @@ pub mod firewall {
     /// Reset the firewalls to their original state.
     #[argh(subcommand, name = "reset")]
     pub struct Reset {}
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// Creates an opening in the firewalls just to your local system.
+    #[argh(subcommand, name = "pierce")]
+    pub struct Pierce {
+        #[argh(option)]
+        /// specify an IP address or host name to open the firewalls to. You can use a hostname instead of an IP address.
+        /// All addresses that hostname resolves to will be used. Do not specify any hosts to assume the addresses of all non-loopback
+        /// network interfaces of this computer.
+        pub host: Vec<String>,
+    }
 }
