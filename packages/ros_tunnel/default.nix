@@ -26,5 +26,14 @@ let
   cargo_nix = pkgs.callPackage ./Cargo.nix {
     buildRustCrateForPkgs = custom_crate_config;
   };
+
+  binary = cargo_nix.rootCrate.build.overrideAttrs { };
 in
-cargo_nix.rootCrate.build.overrideAttrs { }
+(import ../rosify_package {
+  pname = "ros_tunnel";
+  version = binary.version;
+  to_rosify = binary;
+  message_packages = [ ];
+  description = "Tunnels ROS services and topics over standard input and output streams";
+  license = "Apache-2.0";
+})

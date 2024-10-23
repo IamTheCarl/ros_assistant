@@ -1,14 +1,22 @@
 use anyhow::{bail, Context, Result};
-use futures::Stream;
+use bytes::Bytes;
+use futures::StreamExt;
 use hashbrown::{HashMap, HashSet};
 use r2r::{Node, PublisherUntyped, QosProfile};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{io::IsTerminal, time::Duration};
+use std::{
+    io::IsTerminal,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 use tokio::{
-    io::{self, AsyncReadExt, AsyncWriteExt, Stdin, Stdout},
+    io::{self, AsyncReadExt, AsyncWriteExt, DuplexStream, Stdin, Stdout},
     signal::unix::{signal, SignalKind},
-    sync::mpsc,
-    time::MissedTickBehavior,
+    sync::{mpsc, oneshot},
+    time::{Instant, MissedTickBehavior},
 };
 
 #[tokio::main]
@@ -22,7 +30,7 @@ async fn main() -> Result<()> {
         bail!("Refusing to output binary data to terminal");
     }
 
-    log::info!("Starting bridge.");
+    log::info!("Starting tunnel.");
 
     start_communications(&mut output, &mut input)
         .await
@@ -30,7 +38,7 @@ async fn main() -> Result<()> {
 
     tunnel_ros(&mut output, input)
         .await
-        .context("Failed to bridge DDS")?;
+        .context("Failed to tunnel ROS")?;
 
     // Tell the remote we are shutting down.
     let mut buffer = Vec::new();
@@ -88,9 +96,16 @@ async fn tunnel_ros(output: &mut Stdout, mut input: Stdin) -> Result<()> {
     let mut node =
         r2r::Node::create(ctx, "ros_tunnel", "ros_tunnel").context("Failed to create ROS node")?;
 
-    let mut update_interval = tokio::time::interval(Duration::from_secs(10));
+    let shutdown = Arc::new(AtomicBool::new(false));
+    let shutdown_view = shutdown.clone();
+    let spin_handle =
+        tokio::task::spawn_blocking(move || while !shutdown_view.load(Ordering::SeqCst) {});
+
+    let mut update_interval = tokio::time::interval_at(Instant::now(), Duration::from_secs(10));
     update_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
-    update_interval.reset_immediately(); // We want to update as soon as we're ready.
+
+    let mut spin_interval = tokio::time::interval_at(Instant::now(), Duration::from_millis(100));
+    update_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
     let mut sig_terminate =
         signal(SignalKind::terminate()).context("Failed to hook into terminate signal.")?;
@@ -100,11 +115,13 @@ async fn tunnel_ros(output: &mut Stdout, mut input: Stdin) -> Result<()> {
     let mut output_buffer = Vec::new();
     let mut input_buffer = Vec::new();
 
-    let (message_tx, mut message_rx) = mpsc::channel(10);
+    let (incoming_message_tx, mut incoming_message_rx) = mpsc::channel(10);
+    let (outgoing_message_tx, mut outgoing_message_rx) = mpsc::channel::<Bytes>(10);
+
     let message_reception = tokio::spawn(async move {
         loop {
             let message = input.recv_message::<Message>(&mut input_buffer).await;
-            if let Err(error) = message_tx.send(message).await {
+            if let Err(error) = incoming_message_tx.send(message).await {
                 log::error!("Reception error: {error}");
                 break;
             }
@@ -124,11 +141,12 @@ async fn tunnel_ros(output: &mut Stdout, mut input: Stdin) -> Result<()> {
             _ = sig_interrupt.recv() => {
                 break;
             }
-            message = message_rx.recv() => {
+            message = incoming_message_rx.recv() => {
                 let message = message.context("Message queue closed")?.context("Failed to receive message")?;
                 let control_flow = process_command(
                         &mut node,
                         &known_topics,
+                        &outgoing_message_tx,
                         &mut subscribers,
                         &mut publishers,
                         message)
@@ -139,15 +157,27 @@ async fn tunnel_ros(output: &mut Stdout, mut input: Stdin) -> Result<()> {
                     ControlFlow::Exit => break,
                 }
             }
+            message = outgoing_message_rx.recv() => {
+                let message = message.unwrap();
+
+                output.write_all(&message).await.context("Failed to write outgoing message to stdout")?;
+                output.flush().await.context("Failed to flush stdout")?;
+            }
             _ = update_interval.tick() => {
                 scan_for_topics(&mut node, output, &mut output_buffer, &mut known_topics).await?;
                 scan_for_subscriptions(output, &mut output_buffer, &publishers, &mut currently_subscribed).await?;
+            }
+            _ = spin_interval.tick() => {
+                node.spin_once(std::time::Duration::from_millis(0));
             }
         }
     }
 
     // We're done with that.
     message_reception.abort();
+
+    shutdown.store(true, Ordering::SeqCst);
+    spin_handle.await.context("ROS spinner panicked")?;
 
     Ok(())
 }
@@ -160,19 +190,28 @@ enum ControlFlow {
 fn process_command(
     node: &mut Node,
     known_topics: &HashMap<String, String>,
-    subscribers: &mut HashMap<String, Box<dyn Stream<Item = Vec<u8>> + Unpin>>,
+    outgoing_message_tx: &mpsc::Sender<Bytes>,
+    subscribers: &mut HashMap<String, oneshot::Sender<()>>,
     publishers: &mut HashMap<String, PublisherUntyped>,
     message: Message,
 ) -> Result<ControlFlow> {
+    dbg!(&message);
     match message {
         Message::FatalError { message } => bail!("Fatal error from remote: {message}"),
         Message::Hangup => return Ok(ControlFlow::Exit),
         Message::NewTopic { name, message_type } => {
             if !publishers.contains_key(&name) {
-                let publisher = node
-                    .create_publisher_untyped(&name, &message_type, QosProfile::default())
-                    .context("Failed to create publisher")?;
-                publishers.insert(name, publisher);
+                let result =
+                    node.create_publisher_untyped(&name, &message_type, QosProfile::default());
+
+                match result {
+                    Ok(publisher) => {
+                        publishers.insert(name, publisher);
+                    }
+                    Err(error) => {
+                        log::warn!("Failed to create publisher: {error:?}");
+                    }
+                }
             } else {
                 log::warn!("Remote has informed us of topic `{name}` being created twice.");
             }
@@ -182,8 +221,31 @@ fn process_command(
                 // Remote wants to subscribe, which means we need to subscribe.
                 if let Some(topic_type) = known_topics.get(&name) {
                     match node.subscribe_raw(&name, topic_type, QosProfile::default()) {
-                        Ok(subscription) => {
-                            subscribers.insert(name, Box::new(subscription));
+                        Ok(mut subscription) => {
+                            let (shutdown_tx, shutdown_rx) = oneshot::channel();
+                            let mut outgoing_message_tx = outgoing_message_tx.clone();
+
+                            tokio::spawn(async move {
+                                let mut buffer = Vec::new();
+                                tokio::select! {
+                                    _ = shutdown_rx => {
+                                        // That's our signal to unsubscribe.
+                                        // This will break the loop below.
+                                    }
+                                    _ = async move {
+                                        // This loop only exits if the ROS subscription stops providing us messages.
+                                        while let Some(message) = subscription.next().await {
+                                            if let Err(error) = outgoing_message_tx.send_message(&mut buffer, &message).await {
+                                                log::error!("Failed to forward ros topic message to remote: {error:?}");
+                                            }
+                                        }
+                                    } => {
+                                        // ROS closed the stream.
+                                    }
+                                }
+                            });
+
+                            subscribers.insert(name, shutdown_tx);
                         }
                         Err(error) => {
                             log::error!("Failed to subscribe to topic `{name}`: {error:?}");
@@ -194,7 +256,11 @@ fn process_command(
                 }
             } else {
                 // Remote wants to unsubscribe, which means we need to unsubscribe.
-                if subscribers.remove(&name).is_none() {
+                if let Some(shutdown_tx) = subscribers.remove(&name) {
+                    // If this fails, it just means the task was already shutdown.
+                    // That can happen if ROS stops providing the stream.
+                    shutdown_tx.send(()).ok();
+                } else {
                     log::error!("Remote wanted to unsubscribe from a topic `{name}`, but we were never subscribed to that.");
                 }
             }
@@ -202,6 +268,15 @@ fn process_command(
         Message::DeletedTopic { name } => {
             if publishers.remove(&name).is_none() {
                 log::warn!("Remote has informed us of the removal of topic `{name}`, but we were never aware of such a topic.");
+            }
+        }
+        Message::PublishToTopic { name, payload } => {
+            if let Some(publisher) = publishers.get(&name) {
+                if let Err(error) = publisher.publish_raw(&payload) {
+                    log::error!("Failed to publish to topic `{name}`: {error:?}");
+                }
+            } else {
+                log::warn!("Remote has published to unknown topic `{name}`.");
             }
         }
     }
@@ -217,12 +292,13 @@ async fn scan_for_topics(
 ) -> Result<()> {
     match node.get_topic_names_and_types() {
         Ok(topics) => {
-            log::info!("Topics: {topics:?}");
+            log::debug!("Topics: {topics:?}");
 
             // Remove dead topics.
             for (name, _message_type) in
                 known_topics.extract_if(|name, _message_type| !topics.contains_key(name))
             {
+                dbg!(&name, &_message_type);
                 // This loop gets all of the entries that were removed.
                 output
                     .send_message(buffer, &Message::DeletedTopic { name })
@@ -238,6 +314,10 @@ async fn scan_for_topics(
                     // the first type we see.
                     if let Some(message_type) = types.pop() {
                         known_topics.insert(name.clone(), message_type.clone());
+                        output
+                            .send_message(buffer, &Message::NewTopic { name, message_type })
+                            .await
+                            .context("Failed to send new message notice.")?;
                     } else {
                         log::error!("Topic {name} does not have a type.");
                     }
@@ -310,7 +390,7 @@ async fn scan_for_subscriptions(
     Ok(())
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Header {
     version: u16,
 }
@@ -331,45 +411,92 @@ enum Message {
 
     // A topic has disappeared.
     DeletedTopic { name: String },
+
+    // Publish data over a topic.
+    PublishToTopic { name: String, payload: Bytes },
 }
 
 type LengthIndicator = u32;
 
 trait SendMessage {
-    async fn send_message(&mut self, buffer: &mut Vec<u8>, message: &impl Serialize) -> Result<()>;
+    async fn send_message(
+        &mut self,
+        buffer: &mut Vec<u8>,
+        message: &(impl Serialize + std::fmt::Debug),
+    ) -> Result<()>;
 }
 
-impl<W> SendMessage for W
-where
-    W: AsyncWriteExt + Unpin,
-{
-    async fn send_message(&mut self, buffer: &mut Vec<u8>, message: &impl Serialize) -> Result<()> {
-        buffer.clear();
+fn encode_message(
+    buffer: &mut Vec<u8>,
+    message: &(impl Serialize + std::fmt::Debug),
+) -> Result<()> {
+    dbg!(message);
+    buffer.clear();
 
-        // Create a spacer for the length indicator.
-        let length: LengthIndicator = 0;
-        buffer.extend(length.to_le_bytes());
+    // Create a spacer for the length indicator.
+    let length: LengthIndicator = 0;
+    buffer.extend(length.to_le_bytes());
 
-        // Write the payload to the buffer.
-        bincode::serialize_into(&mut *buffer, message).context("Failed to serialize message")?;
+    // Write the payload to the buffer.
+    bincode::serialize_into(&mut *buffer, message).context("Failed to serialize message")?;
 
-        // Now we know the actual length of the message.
-        let length: u32 =
-            (buffer.len() - std::mem::size_of::<LengthIndicator>()) as LengthIndicator;
-        buffer[0..std::mem::size_of::<LengthIndicator>()].copy_from_slice(&length.to_le_bytes());
+    // Now we know the actual length of the message.
+    let length: u32 = (buffer.len() - std::mem::size_of::<LengthIndicator>()) as LengthIndicator;
+    buffer[0..std::mem::size_of::<LengthIndicator>()].copy_from_slice(&length.to_le_bytes());
 
-        // We can finally send the message.
-        self.write_all(buffer.as_slice())
+    Ok(())
+}
+
+// I couldn't apply SendMessage generically to all AsyncWrite types, because
+// apparently `mpsc::Sender<Bytes>` may implement AsyncWrite some day. I can't
+// exclude it specifically from my implementation, so I had to do this.
+macro_rules! impl_send_message {
+    ($ty:ident) => {
+        impl SendMessage for $ty {
+            async fn send_message(
+                &mut self,
+                buffer: &mut Vec<u8>,
+                message: &(impl Serialize + std::fmt::Debug),
+            ) -> Result<()> {
+                encode_message(buffer, message)?;
+
+                // We can finally send the message.
+                self.write_all(buffer.as_slice())
+                    .await
+                    .context("Failed to send message")?;
+
+                self.flush()
+                    .await
+                    .context("Failed to flush output buffer")?;
+
+                Ok(())
+            }
+        }
+    };
+}
+
+// Sends messages through stdout, directly.
+impl_send_message!(Stdout);
+impl_send_message!(DuplexStream);
+
+// External tasks can queue messages to be sent through stdout by the main task.
+impl SendMessage for mpsc::Sender<Bytes> {
+    async fn send_message(
+        &mut self,
+        _buffer: &mut Vec<u8>,
+        message: &(impl Serialize + std::fmt::Debug),
+    ) -> Result<()> {
+        let mut buffer = Vec::new();
+        encode_message(&mut buffer, message)?;
+
+        self.send(buffer.into())
             .await
-            .context("Failed to send message")?;
-
-        self.flush()
-            .await
-            .context("Failed to flush output buffer")?;
+            .context("Outgoing message queue closed")?;
 
         Ok(())
     }
 }
+
 trait RecvMessage {
     async fn recv_message<M>(&mut self, buffer: &mut Vec<u8>) -> Result<M>
     where

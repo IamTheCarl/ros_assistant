@@ -7,8 +7,6 @@ let
     rustc = rust;
   };
 
-  ros_tunnel = (import ../ros_tunnel { pkgs = pkgs; });
-
   cargo_nix = pkgs.callPackage ./Cargo.nix { };
   package = cargo_nix.rootCrate.build;
 in
@@ -23,7 +21,13 @@ pkgs.stdenv.mkDerivation {
     pkgs.nix
     pkgs.nixos-rebuild
     pkgs.openssh
-    ros_tunnel
+    (pkgs.rosPackages.humble.buildEnv
+      {
+        paths = [
+          pkgs.rosPackages.humble.ros-core
+          (import ../ros_tunnel { pkgs = pkgs; })
+        ];
+      })
   ];
 
   phases = [ "installPhase" ];
@@ -32,6 +36,6 @@ pkgs.stdenv.mkDerivation {
     mkdir -p $out/bin
     cp ${package}/bin/cli $out/bin/rass
     wrapProgram $out/bin/rass \
-      --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin:${ros_tunnel}/bin
+      --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin
   '';
 }

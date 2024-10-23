@@ -55,7 +55,7 @@ pub(crate) fn tunnel(args: TunnelCommand) -> Result<()> {
     ssh_command.arg("-F");
     ssh_command.arg(ssh_config);
     ssh_command.arg(host);
-    ssh_command.arg("ros_tunnel");
+    ssh_command.arg("ros2 run ros_tunnel ros_tunnel");
 
     ssh_command
         .stdout(Stdio::piped())
@@ -67,7 +67,9 @@ pub(crate) fn tunnel(args: TunnelCommand) -> Result<()> {
     let mut ssh_out = ssh.stdout.take().unwrap();
     let ssh_stderr = ssh.stderr.take().unwrap();
 
-    let mut tunnel_command = Command::new("ros_tunnel");
+    let mut tunnel_command = Command::new("ros2");
+    tunnel_command.args(["run", "ros_tunnel", "ros_tunnel"]);
+
     tunnel_command
         .stdout(Stdio::piped())
         .stdin(Stdio::piped())
