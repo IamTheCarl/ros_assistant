@@ -11,6 +11,7 @@ pkgs.mkShell {
           pkgs.rosPackages.humble.ros-core
           pkgs.rosPackages.humble.joy
           pkgs.rosPackages.humble.teleop-twist-joy
+          pkgs.rosPackages.humble.rviz2
           (import ../../../create_bridge_interface { pkgs = pkgs; })
         ];
       })
