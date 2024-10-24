@@ -63,8 +63,7 @@ in
         networkmanager.enable = true;
         hostName = "rosetta";
 
-        # TODO re-enable firewall.
-        firewall.enable = false;
+        firewall.enable = true;
       };
 
     # Bluetooth
@@ -91,10 +90,10 @@ in
       pkgs.htop
       pkgs.bluez
       pkgs.linuxConsoleTools
+      pkgs.usbutils
       (ros_pkgs.rosPackages.humble.buildEnv {
         paths = [
           ros_pkgs.rosPackages.humble.ros-core
-          (import ../../../../dds_bridge { pkgs = pkgs; })
         ];
       })
     ];
@@ -104,6 +103,8 @@ in
       dialout.members = [ "ros" ];
       # Let ROS access human input devices (specifically, game pads)
       input.members = [ "ros" ];
+      # Access video (specifically, realsense camera)
+      video.members = [ "ros" ];
     };
 
     services.ros2 = {
@@ -113,13 +114,13 @@ in
       nodes = {
         # Bridges ROS and the iRobot Create interface.
         create_bridge = {
-          package = "create_bridge";
           env = (ros_pkgs.rosPackages.humble.buildEnv {
             paths = [
               ros_pkgs.rosPackages.humble.ros-core
               (import ../../../../create_bridge { pkgs = pkgs; })
             ];
           });
+          package = "create_bridge";
           node = "create_bridge";
           args = [ ];
           rosArgs = [ ];
@@ -129,13 +130,13 @@ in
         };
         # Provides joystick messages from a locally connected joystick.
         joy = {
-          package = "joy";
           env = (ros_pkgs.rosPackages.humble.buildEnv {
             paths = [
               ros_pkgs.rosPackages.humble.ros-core
               ros_pkgs.rosPackages.humble.joy
             ];
           });
+          package = "joy";
           node = "joy_node";
           args = [ ];
           rosArgs = [ ];
@@ -143,13 +144,13 @@ in
         };
         # Converts Joystick messages into velocity commands.
         teleop-twist-joy = {
-          package = "teleop_twist_joy";
           env = (ros_pkgs.rosPackages.humble.buildEnv {
             paths = [
               ros_pkgs.rosPackages.humble.ros-core
               ros_pkgs.rosPackages.humble.teleop-twist-joy
             ];
           });
+          package = "teleop_twist_joy";
           node = "teleop_node";
           args = [ ];
           rosArgs = [ ];
@@ -165,14 +166,29 @@ in
         };
         # Converts velocity commands into Create 2 movement commands.
         create_cmd_vel = {
-          package = "create_cmd_vel";
           env = (ros_pkgs.rosPackages.humble.buildEnv {
             paths = [
               ros_pkgs.rosPackages.humble.ros-core
               (import ../../../../create_cmd_vel { pkgs = pkgs; })
             ];
           });
+          package = "create_cmd_vel";
           node = "create_cmd_vel";
+          args = [ ];
+          rosArgs = [ ];
+          params = { };
+        };
+        # Not enough power for the real sense camera :(
+        # We're going to use a cheap webcam instaed.
+        webcam = {
+          env = (ros_pkgs.rosPackages.humble.buildEnv {
+            paths = [
+              ros_pkgs.rosPackages.humble.ros-core
+              ros_pkgs.rosPackages.humble.usb-cam
+            ];
+          });
+          package = "usb_cam";
+          node = "usb_cam_node_exe";
           args = [ ];
           rosArgs = [ ];
           params = { };
