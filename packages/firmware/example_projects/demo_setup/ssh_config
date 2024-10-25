@@ -1,0 +1,3 @@
+Host arduino-test
+  HostName arduino-test
+  User root
