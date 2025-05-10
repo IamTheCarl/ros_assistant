@@ -66,7 +66,7 @@ in
     # Networking
     systemd.network.enable = true;
     networking.useNetworkd = true;
-    networking.hostName = "arduino-test";
+    networking.hostName = "firmware-test";
 
     # SSH
     systemd.services.sshd.wantedBy = lib.mkForce [ "multi-user.target" ];

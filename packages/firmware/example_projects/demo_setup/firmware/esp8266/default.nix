@@ -19,3 +19,5 @@ build_arduino {
 
   src = ./.;
 }
+
+# platform_packages.esp8266.platforms.esp8266."3.1.2"
