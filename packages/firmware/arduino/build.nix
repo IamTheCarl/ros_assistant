@@ -11,10 +11,11 @@ let
   };
   sketch_json = pkgs.writeText "sketch.json" (pkgs.lib.generators.toJSON { } sketch_config);
   filteredArgs = builtins.removeAttrs args [ "fqbn" "platforms" ];
+  arduino-cli = import ./wrap-arduino-cli.nix { pkgs = pkgs; };
 
   build_arguments = {
     nativeBuildInputs = [
-      pkgs.arduino-cli
+      arduino-cli
       pkgs.yj
     ];
   
