@@ -1,21 +1,13 @@
 { pkgs ? import <nixpkgs> { }, packages ? [], libraries ? []}:
 # Draws a lot of insparation from: https://github.com/bouk/arduino-nix/blob/dd6c6f4de7d8d8bb460508de911c120dfc35b709/wrap-arduino-cli.nix
 let
-  # Borrow Bouk's work.
-  # arduino-nix = pkgs.fetchFromGitHub {
-  #   owner = "bouk";
-  #   repo = "arduino-nix";
-  #   rev = "dd6c6f4de7d8d8bb460508de911c120dfc35b709";
-  #   hash = "sha256-PGZVUTg8BQKL1QgTr3Fcia8RBYYqsbHbx9lIunqdmxQ=";
-  # };
-  # arduino-lib = import "${arduino-nix}/lib.nix" { lib = pkgs.lib; };
-
-
+  package_directories = map (package: package.derivation) packages;
+ 
   # Arduino-cli will try to download this stuff if it isn't already present.
   # These dummies prevent that from happening.
   data_directory = pkgs.symlinkJoin {
     name = "arduino-data";
-    paths = packages ++ [
+    paths = package_directories ++ [
       (pkgs.writeTextDir "inventory.yaml" (builtins.toJSON {}))
       (pkgs.writeTextDir "package_index.json" (builtins.toJSON {packages = [];}))
       (pkgs.writeTextDir "library_index.json" (builtins.toJSON {libraries = [];}))
