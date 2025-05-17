@@ -1,7 +1,7 @@
 { pkgs ? import <nixpkgs> { }, packages ? [], libraries ? []}:
 # Draws a lot of insparation from: https://github.com/bouk/arduino-nix/blob/dd6c6f4de7d8d8bb460508de911c120dfc35b709/wrap-arduino-cli.nix
 let
-  package_directories = map (package: package.derivation) packages;
+  package_directories = map (package: [package.derivation] ++ package.toolsDependencies) packages;
  
   # Arduino-cli will try to download this stuff if it isn't already present.
   # These dummies prevent that from happening.
