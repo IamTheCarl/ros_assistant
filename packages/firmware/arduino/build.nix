@@ -1,39 +1,42 @@
 # Build an Arduino sketch
-{ pkgs ? import <nixpkgs> { } }: args@{ pname, fqbn, platforms, ... }:
+{ pkgs ? import <nixpkgs> { } }: args@{ pname, fqbn, packages, platforms, ... }:
 let
-  sketch_config = {
-    profiles = {
-      ${pname} = {
-        inherit fqbn;
-	platforms = map (platform: {
-          platform = "${platform.name}:${platform.name} (${platform.version})";
-	  platform_index_url = platform.url;
-	}) platforms;
-      };
-    };
-  };
-  sketch_json = pkgs.writeText "sketch.json" (pkgs.lib.generators.toJSON { } sketch_config);
-  filteredArgs = builtins.removeAttrs args [ "fqbn" "platforms" ];
+  select_latest_version = attrs: (
+    builtins.head (
+      builtins.sort (
+        a: b: (builtins.compareVersions a.version b.version) == 1
+      )
+      (
+        builtins.attrValues (
+	  builtins.mapAttrs (
+	    version: value: {
+	      inherit version value;
+	    })
+	  attrs
+	)
+      )
+    )
+  ).value;
+
+  # Platforms don't specify dependencies on the builtins, so we just have to include those
+  # ourselves. We will use the latest version available.
+  arduino_builtins = map select_latest_version (builtins.attrValues packages.tools.builtin);
+
+  filteredArgs = builtins.removeAttrs args [ "fqbn" "packages" "platforms" ];
   arduino-cli = import ./wrap-arduino-cli.nix {
     inherit pkgs;
-    packages = platforms;
+    packages = arduino_builtins ++ platforms;
     libraries = [];
   };
 
   build_arguments = {
     nativeBuildInputs = [
       arduino-cli
-      pkgs.yj
+      pkgs.python314
     ];
   
-    postUnpack = ''
-      cat ${sketch_json} | yj -jy > $sourceRoot/sketch.yaml
-      cat $sourceRoot/sketch.yaml
-      ls $sourceRoot
-    '';
-  
     buildPhase = ''
-      arduino-cli compile --profile ${pname} --output-dir output
+      arduino-cli compile --fqbn "${fqbn}" --output-dir output
     '';
   
     installPhase = ''
@@ -43,3 +46,4 @@ let
   };
 in
 pkgs.stdenv.mkDerivation (filteredArgs // build_arguments)
+# { inherit arduino_builtins; }

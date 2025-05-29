@@ -1,6 +1,6 @@
 { pkgs ? import <nixpkgs> { } }:
 let
-  platforms = pkgs.callPackage ../../../../arduino/platform.nix {
+  packages = pkgs.callPackage ../../../../arduino/packages.nix {
     platform_indexes = [
       (builtins.fetchurl {
         url = "https://downloads.arduino.cc/packages/package_index.json";
@@ -17,14 +17,15 @@ let
     inherit pkgs;
   };
 in
-# build_arduino {
-#   pname = "blink";
-#   version = "1.0.0";
-#   fqbn = "esp8266:esp8266:nodemcu";
-#   platforms = [
-#     platforms.esp8266.esp8266."3.1.2"
-#   ];
-# 
-#   src = ./.;
-# }
-{ inherit platforms; }
+build_arduino {
+  pname = "blink";
+  version = "1.0.0";
+  fqbn = "esp8266:esp8266:nodemcu";
+  inherit packages;
+  platforms = [
+    packages.platforms.esp8266.esp8266."3.1.2"
+  ];
+
+  src = ./.;
+}
+# packages

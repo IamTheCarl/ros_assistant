@@ -21,15 +21,35 @@ let
     paths = libraries;
   };
 in
-pkgs.runCommand "arduino-cli-wrapped" {
-  buildInputs = [ pkgs.makeWrapper ];
-  meta.mainProgram = "arduino-cli";
-  passthru = {
-    inherit data_directory user_directory;
-  };
-} ''
-  makeWrapper ${pkgs.arduino-cli}/bin/arduino-cli $out/bin/arduino-cli \
-    --set ARDUINO_UPDATER_ENABLE_NOTIFICATION false \
-    --set ARDUINO_DIRECTORIES_DATA ${data_directory} \
-    --set ARDUINO_DIRECTORIES_USER ${user_directory}
+pkgs.writeShellScriptBin "arduino-cli" ''
+  #/usr/bin/env bash
+
+  export ARDUINO_UPDATER_ENABLE_NOTIFICATION=false
+  export ARDUINO_DIRECTORIES_DATA=$(mktemp -d)
+  export ARDUINO_DIRECTORIES_USER=${user_directory}
+ 
+  # Automate cleanup.
+  # cleanup() {
+  #   rm -rf $ARDUINO_DIRECTORIES_DATA
+  # }
+  # trap cleanup EXIT
+
+  # Some Arduino platforms have the insane expectation of being able to write to the
+  # data directory, so this is our workaround for that problem.
+  cp -rL ${data_directory}/* $ARDUINO_DIRECTORIES_DATA
+
+  ${pkgs.arduino-cli}/bin/arduino-cli $@
+
 ''
+# pkgs.runCommand "arduino-cli-wrapped" {
+#   buildInputs = [ pkgs.makeWrapper ];
+#   meta.mainProgram = "arduino-cli";
+#   passthru = {
+#     inherit data_directory user_directory;
+#   };
+# } ''
+#   makeWrapper ${pkgs.arduino-cli}/bin/arduino-cli $out/bin/arduino-cli \
+#     --set ARDUINO_UPDATER_ENABLE_NOTIFICATION false \
+#     --set ARDUINO_DIRECTORIES_DATA ${data_directory} \
+#     --set ARDUINO_DIRECTORIES_USER ${user_directory}
+# ''

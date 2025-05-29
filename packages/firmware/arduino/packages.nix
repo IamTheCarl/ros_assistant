@@ -11,19 +11,11 @@ let
       sha256 = pkgs.lib.replaceStrings ["MD5" "SHA-1" "SHA-256"] ["md5" "sha1" "sha256"] package.checksum;
     };
 
-    nativeBuildInputs = [ pkgs.unzip ];
-
-    buildPhase = ''
-      if [[ "$src" == *.zip ]]; then
-        unzip $src
-      else
-        tar xf $src
-      fi
-    '';
+    nativeBuildInputs = [ pkgs.unzip pkgs.gnutar ];
 
     installPhase = ''
       mkdir -p $out/${destination}
-      cp -r * -d $out/${destination}
+      cp -rd $src $out/${destination}
     '';
   };
 
@@ -43,8 +35,10 @@ let
     )
     index_files
   );
-  generate_system_tool = system: tool: platform_name:
-    download_package (system // { name = tool.name; }) "packages/${platform_name}/tools/${tool.name}/${tool.version}";
+  generate_system_tool = system: tool: platform_name: { 
+      derivation = download_package (system // { name = tool.name; }) "packages/${platform_name}/tools/${tool.name}/${tool.version}";
+      toolsDependencies = [];
+  };
   # From: https://github.com/arduino/arduino-cli/blob/dd621eecd5bc9d4a52edb8c06eea2550d3f12e29/internal/arduino/cores/tools.go#L129
   # Insparation borrowed from: https://github.com/bouk/arduino-nix/blob/dd6c6f4de7d8d8bb460508de911c120dfc35b709/lib.nix#L22
   select_system = systems: 
@@ -78,15 +72,16 @@ let
     };
   };
 
-  platforms = merge_sets (
+  packages = merge_sets (
     map (
       index_file:
         merge_sets (
           map (
 	    package: {
-	      packages."${package.name}" = merge_sets (
+	      platforms."${package.name}" = merge_sets (
                 map generate_platform package.platforms
 	      );
+	      tools."${package.name}" = tools."${package.name}";
 	    }
 	  )
 	  index_file.packages
@@ -99,10 +94,10 @@ let
     "${platform.name}" = {
       "${platform.version}" = platform // {
         derivation = download_package platform "packages/${platform.name}/hardware/${platform.architecture}/${platform.version}";
-	toolsDependencies = map ({packager, name, version}: tools.${packager}.${name}.${version}) platform.toolsDependencies;
+	toolsDependencies = map ({packager, name, version}: tools.${packager}.${name}.${version}.derivation) platform.toolsDependencies;
       };
     };
   };
 in
-platforms
+packages
 # tools
