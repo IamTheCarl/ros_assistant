@@ -1,0 +1,47 @@
+[package]
+authors = ["James Carl <jamescarl96@gmail.com>"]
+edition = "2021"
+readme = "README.md"
+name = "dfu_demo"
+version = "0.1.0"
+
+[dependencies]
+defmt = "1"
+defmt-rtt = "1"
+
+cortex-m = { version = "0.7", features = ["inline-asm", "critical-section-single-core"] }
+cortex-m-rt = "0.7"
+embedded-hal = "0.2.6"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+heapless = { version = "0.8", default-features = false }
+nb = "1.0.0"
+embedded-storage = "0.3.1"
+static_cell = "2"
+
+embassy-stm32 = { version = "0.2.0", features = [ "defmt", "stm32f303vc", "unstable-pac", "memory-x", "time-driver-tim2", "exti" ] }
+embassy-sync = { version = "0.6.2", features = [ "defmt" ] }
+embassy-executor = { version = "0.7.0", features = [ "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt" ] }
+embassy-time = { version = "0.4.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+embassy-usb = { version = "0.4.0", features = ["defmt"] }
+embassy-net = { version = "0.7.0", features = ["defmt", "icmp", "proto-ipv4", "udp", "tcp", "medium-ethernet"] }
+embassy-futures = "0.1.1"
+
+# this lets you use `cargo fix`!
+[[bin]]
+name = "dfu_demo"
+test = false
+bench = false
+
+[profile.dev]
+debug = true
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+
+[profile.release]
+debug = true
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+opt-level = 3
