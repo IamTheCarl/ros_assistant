@@ -1,10 +1,6 @@
 [target.thumbv7em-none-eabihf]
 runner = 'probe-rs run --connect-under-reset --chip STM32F303VCTx'
 
-# [target.'cfg(all(target_arch = "arm", target_os = "none"))']
-# (..)
-linker = "flip-link"
-
 [build]
 target = "thumbv7em-none-eabihf"
 
