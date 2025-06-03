@@ -18,13 +18,17 @@ nb = "1.0.0"
 embedded-storage = "0.3.1"
 static_cell = "2"
 
-embassy-stm32 = { version = "0.2.0", features = [ "defmt", "stm32f303vc", "unstable-pac", "memory-x", "time-driver-tim2", "exti" ] }
+embassy-boot-stm32 = "0.3.0"
+
+embassy-stm32 = { version = "0.2.0", features = [ "defmt", "stm32f303vc", "unstable-pac", "time-driver-tim2", "exti" ] }
 embassy-sync = { version = "0.6.2", features = [ "defmt" ] }
 embassy-executor = { version = "0.7.0", features = [ "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt" ] }
 embassy-time = { version = "0.4.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
 embassy-usb = { version = "0.4.0", features = ["defmt"] }
 embassy-net = { version = "0.7.0", features = ["defmt", "icmp", "proto-ipv4", "udp", "tcp", "medium-ethernet"] }
 embassy-futures = "0.1.1"
+
+firmware_update_messages = { path = "../../../firmware_update_messages" }
 
 # this lets you use `cargo fix`!
 [[bin]]

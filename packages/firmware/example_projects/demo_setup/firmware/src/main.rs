@@ -26,6 +26,8 @@ use heapless::Vec;
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
+mod update;
+
 type UsbDriver = Driver<'static, embassy_stm32::peripherals::USB>;
 
 const MTU: usize = 1514;
@@ -131,6 +133,7 @@ async fn main(spawner: Spawner) {
         embassy_net::new(device, config, RESOURCES.init(StackResources::new()), seed);
 
     defmt::unwrap!(spawner.spawn(net_task(runner)));
+    defmt::unwrap!(spawner.spawn(update::update_task(stack, 5000)));
 
     let mut led = Output::new(p.PE13, Level::High, Speed::Low);
 

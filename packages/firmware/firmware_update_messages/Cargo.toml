@@ -1,0 +1,9 @@
+[package]
+name = "firmware_update_messages"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+postcard = "1"
+heapless = { version = "0.8", features = [ "serde" ] }
+serde = { version = "1", default-features = false, features = [ "derive" ] }

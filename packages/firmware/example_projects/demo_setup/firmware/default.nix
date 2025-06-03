@@ -4,7 +4,10 @@ let
     config = {
       allowUnsupportedSystem = true;
     };
-    crossSystem = pkgs.lib.systems.examples.arm-embedded // {
+    crossSystem = pkgs.lib.systems.examples.armhf-embedded // {
+      extensions = {
+        sharedLibrary = ".so";
+      };
       rustc = {
         config = "thumbv7em-none-eabihf";
       };
@@ -19,12 +22,12 @@ in
 rust_platform.buildRustPackage rec {
   pname = "embedded_firmware_demo";
   version = "0.0.1";
- 
+
   RUSTFLAGS = [
     "-C"
     "linker=${pkgs_cross.stdenv.cc.targetPrefix}ld"
   ];
 
   src = ./.;
-  cargoHash = "sha256-LntGAlek3O49wNtXuZMfDA2StJohjs75SHX/X5LYRLU=";
+  cargoLock.lockFile = ./Cargo.lock;
 }
