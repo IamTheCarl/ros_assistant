@@ -28,7 +28,7 @@ embassy-usb = { version = "0.4.0", features = ["defmt"] }
 embassy-net = { version = "0.7.0", features = ["defmt", "icmp", "proto-ipv4", "udp", "tcp", "medium-ethernet"] }
 embassy-futures = "0.1.1"
 
-firmware_update_messages = { path = "../../../firmware_update_messages" }
+# firmware_update_messages = { path = "../../../firmware_update_messages" }
 
 # this lets you use `cargo fix`!
 [[bin]]

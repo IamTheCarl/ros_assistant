@@ -1,5 +1,5 @@
 
-{ pkgs ? import <nixpkgs> { } }:
+{ pkgs ? import <nixpkgs> { }, ... }:
 let
   rust-overlay = import (builtins.fetchTarball "https://github.com/oxalica/rust-overlay/archive/stable.tar.gz");
   pkgs = import <nixpkgs> { overlays = [ rust-overlay ]; };

@@ -1,33 +1,68 @@
 { pkgs ? import <nixpkgs> { } }:
 let
-  pkgs_cross = import pkgs.path {
+  rust-overlay = builtins.fetchTarball "https://github.com/oxalica/rust-overlay/archive/stable.tar.gz";
+  lib = pkgs.lib;
+
+  pkgsCross = import pkgs.path {
     config = {
       allowUnsupportedSystem = true;
     };
-    crossSystem = pkgs.lib.systems.examples.armhf-embedded // {
-      extensions = {
-        sharedLibrary = ".so";
-      };
+    system = builtins.currentSystem;
+    crossSystem = {
+      config = "arm-none-eabihf";
+      isStatic = true;
       rustc = {
         config = "thumbv7em-none-eabihf";
       };
+      gcc = {
+        arch = "armv7";
+        fpu = "vfp";
+      };
     };
+    overlays = [
+      (import rust-overlay)
+      (final: _prev: {
+        rustToolchain = (final.rust-bin.stable.latest.default.override {
+          extensions = [
+            "rust-src"
+            "rust-analyzer"
+            "rustfmt"
+            "clippy"
+          ];
+          targets = [
+            "thumbv7em-none-eabihf"
+          ];
+        });
+      })
+    ];
   };
-  rust = pkgs_cross.callPackage ./nix-libs/rust.nix {};
-  rust_platform = pkgs_cross.makeRustPlatform {
-    cargo = rust;
-    rustc = rust;
+
+  pkgsBuild = pkgsCross.buildPackages;
+
+  rustPlatform = pkgsCross.makeRustPlatform {
+    cargo = pkgsBuild.rustToolchain;
+    rustc = pkgsBuild.rustToolchain;
+  };
+
+  buildRustCrateForPkgs = crate: pkgsCross.buildRustCrate.override {
+    rustc = pkgsBuild.rustToolchain;
+    cargo = pkgsBuild.rustToolchain;
+  };
+  cargo_nix = import ./Cargo.nix {
+    pkgs = pkgsCross;
+    inherit buildRustCrateForPkgs; 
   };
 in
-rust_platform.buildRustPackage rec {
-  pname = "embedded_firmware_demo";
-  version = "0.0.1";
-
-  RUSTFLAGS = [
-    "-C"
-    "linker=${pkgs_cross.stdenv.cc.targetPrefix}ld"
-  ];
-
-  src = ./.;
-  cargoLock.lockFile = ./Cargo.lock;
-}
+cargo_nix.rootCrate.build
+# rustPlatform.buildRustPackage rec {
+#   pname = "embedded_firmware_demo";
+#   version = "0.0.1";
+#  
+#   RUSTFLAGS = [
+#     "-C"
+#     "linker=${pkgsCross.stdenv.cc.targetPrefix}ld"
+#   ];
+# 
+#   src = ./.;
+#   cargoLock.lockFile = ./Cargo.lock;
+# }
