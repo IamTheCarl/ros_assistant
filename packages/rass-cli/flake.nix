@@ -1,5 +1,5 @@
 {
-  description = "Carpet Puncher flake";
+  description = "RASS command line tool";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
