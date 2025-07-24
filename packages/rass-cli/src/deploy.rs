@@ -1,11 +1,11 @@
 use std::{
-    io::Write,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
 use crate::{arguments, filter_hosts, host_config::HostConfig, load_project};
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
+use regex::Regex;
 use tempfile::NamedTempFile;
 
 pub fn deploy(build_machines: Vec<String>, args: arguments::Deploy) -> Result<()> {
@@ -128,6 +128,143 @@ fn deploy_ssh<'a>(
     Ok(())
 }
 
+struct DeployContext {
+    build_machines: Vec<String>,
+    host_filter: Regex,
+    ssh_config_path: String,
+    project_root: PathBuf,
+    output_directory: PathBuf,
+}
+
+impl DeployContext {
+    fn new(
+        build_machines: Vec<String>,
+        host_filter: Option<&str>,
+        ssh_config: PathBuf,
+        project_root: PathBuf,
+        link_path: Option<&Path>,
+    ) -> Result<Self> {
+        log::info!("Project root: {:?}", project_root);
+
+        if let Some(host_filter) = host_filter {
+            log::info!("Host filter: '{host_filter}'");
+        } else {
+            log::info!("Host filter: None");
+        }
+
+        let host_filter = Regex::new(host_filter.unwrap_or(".*"))
+            .context("Failed to compile regex expression for host filter")?;
+
+        let ssh_config_path = ssh_config
+            .as_os_str()
+            .to_str()
+            .map(|s| s.to_string())
+            .context("Path to SSH config could not be encoded as UTF8")?;
+
+        let output_directory = link_path
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| project_root.join("result"));
+        if output_directory.exists() {
+            if output_directory.is_dir() {
+                std::fs::remove_dir_all(&output_directory)
+            } else {
+                std::fs::remove_file(&output_directory)
+            }
+            .context("Failed to remove old result output.")?;
+        };
+
+        Ok(Self {
+            build_machines,
+            host_filter,
+            ssh_config_path,
+            project_root,
+            output_directory,
+        })
+    }
+
+    fn get_hosts_list(&self) -> Result<Vec<String>> {
+        let mut command = Command::new("nix");
+        command.args([
+            "eval",
+            "--raw",
+            ".#nixosConfigurations",
+            "--apply",
+            "pkgs: builtins.concatStringsSep \" \" (builtins.attrNames pkgs)",
+        ]);
+
+        let result = command.output().context("Failed to run `nix eval`")?;
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        if result.status.success() {
+            if !result.stderr.is_empty() {
+                log::warn!("`nix eval` had stderr output: {}", stderr);
+            }
+
+            let output = String::from_utf8(result.stdout)
+                .context("`nix eval` output is not utf8 encoded text")?;
+
+            let hosts = output.split_whitespace();
+            Ok(hosts.map(|s| s.to_string()).collect())
+        } else {
+            bail!("`nix eval` returned status {}: {}", result.status, stderr);
+        }
+    }
+
+    fn run_build(&self, host: &str, target: &str) -> Result<()> {
+        let mut command = Command::new("nix");
+        command.env("NIX_SSHOPTS", format!("-F {}", self.ssh_config_path));
+        command.current_dir(&self.project_root);
+
+        // Configure builders.
+        let build_machine_list = self.build_machines.join(";");
+        command.arg("--builders");
+        command.arg(build_machine_list);
+
+        // Configure output path.
+        let output_directory = self.output_directory.join(host);
+
+        // Our action.
+        command.arg("build");
+
+        command.arg("--out-link");
+        command.arg(output_directory);
+
+        // Specify which output to build.
+        command.arg(target);
+
+        let mut child = command
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .context("Failed to spawn nix build.")?;
+
+        let result = child
+            .wait()
+            .context("Failed to wait for nix-build to complete.")?;
+
+        if !result.success() {
+            bail!("`nix build` returned non-zero output.");
+        } else {
+            Ok(())
+        }
+    }
+
+    fn run_against_hosts(&self, mut to_run: impl FnMut(&str) -> Result<()>) -> Result<()> {
+        let host_list = self
+            .get_hosts_list()
+            .context("Failed to get list of hosts from flake.nix")?;
+
+        let hosts = host_list
+            .iter()
+            .filter(move |host| self.host_filter.captures(host).is_some());
+
+        for host in hosts {
+            to_run(host).with_context(|| format!("Error while processing host {host}"))?;
+        }
+
+        Ok(())
+    }
+}
+
 fn build_disk_images(
     build_machines: Vec<String>,
     project_root: PathBuf,
@@ -136,76 +273,24 @@ fn build_disk_images(
     args: arguments::DiskImage,
 ) -> Result<()> {
     log::info!("Building boot disk images.");
-    log::info!("Project root: {:?}", project_root);
-    let host_configurations = HostConfig::load_project_hosts(&project_root)
-        .context("Failed to load configuration for project hosts.")?;
 
-    for host in filter_hosts(host_configurations.iter(), host_filter)? {
-        // We already checked during the host config loading that this is UTF8 encoded.
-        let host_file_path = project_root
-            .join("hosts")
-            .join(format!("{}.nix", host.hostname))
-            .to_str()
-            .unwrap()
-            .to_string();
+    let context = DeployContext::new(
+        build_machines,
+        host_filter,
+        ssh_config,
+        project_root,
+        args.link_path.as_ref().map(|p| p.as_path()),
+    )
+    .context("Failed to initalize build")?;
 
-        log::info!("Building '{}'", host_file_path);
+    context.run_against_hosts(|host| {
+        context.run_build(
+            host,
+            &format!(".#nixosConfigurations.{host}.config.system.build.raw"),
+        )
+    })?;
 
-        let mut command = Command::new("nix-build");
-        let ssh_config = ssh_config
-            .as_os_str()
-            .to_str()
-            .context("Path to SSH config could not be encoded as UTF8")?;
-        command.env("NIX_SSHOPTS", format!("-F {}", ssh_config));
-
-        // Configure builders.
-        populate_build_mache_args(&mut command, &build_machines);
-
-        // Configure output path.
-        let output_directory = args
-            .link_path
-            .clone()
-            .unwrap_or_else(|| project_root.join("result").join(&host.hostname));
-        if output_directory.exists() {
-            std::fs::remove_dir_all(&output_directory)
-                .context("Failed to remove old result output.")?;
-        }
-
-        command.arg("--out-link");
-        command.arg(output_directory);
-
-        // Configure for building a disk image.
-        command.arg("<nixpkgs/nixos>");
-        command.args([
-            "--option",
-            "system",
-            host.ros_assistant.arch.as_nix_system_str(),
-        ]);
-        command.args([
-            "--extra-platforms",
-            host.ros_assistant.arch.as_nix_system_str(),
-        ]);
-        command.args(["-A", host.ros_assistant.image_output.as_str()]);
-
-        command.arg("-I");
-        command.arg(format!("nixos-config={}", host_file_path));
-
-        let mut child = command
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()
-            .context("Failed to spawn nix-build.")?;
-
-        let result = child
-            .wait()
-            .context("Failed to wait for nix-build to complete.")?;
-
-        if !result.success() {
-            log::error!("Build unsuccessful.");
-        } else {
-            log::info!("Build successful.");
-        }
-    }
+    log::info!("Build successful.");
 
     Ok(())
 }
@@ -217,8 +302,6 @@ fn build_installer(
     ssh_config: PathBuf,
     args: arguments::InstallerISO,
 ) -> Result<()> {
-    let installer_iso_script = include_str!("nix_scripts/installer_iso.nix");
-
     log::info!("Building installer ISO images.");
     log::info!("Project root: {:?}", project_root);
     let host_configurations = HostConfig::load_project_hosts(&project_root)
@@ -271,17 +354,17 @@ fn build_installer(
             "No installation target specified. Please set `option.ros_assistant.target_device`",
         )?;
 
-        let install_script_content = installer_iso_script
-            .replace(
-                "target_arch",
-                &format!("\"{}\"", host.ros_assistant.arch.as_nix_system_str()),
-            )
-            .replace("target_device", &format!("\"{}\"", &target_device))
-            .replace("target_config", host_file_path.as_str());
+        // let install_script_content = installer_iso_script
+        //     .replace(
+        //         "target_arch",
+        //         &format!("\"{}\"", host.ros_assistant.arch.as_nix_system_str()),
+        //     )
+        //     .replace("target_device", &format!("\"{}\"", &target_device))
+        //     .replace("target_config", host_file_path.as_str());
 
-        installer_iso_build_file
-            .write_all(install_script_content.as_bytes())
-            .context("Failed to write content to ISO builder script tempfile")?;
+        // installer_iso_build_file
+        //     .write_all(install_script_content.as_bytes())
+        //     .context("Failed to write content to ISO builder script tempfile")?;
         let installer_iso_path = installer_iso_build_file
             .path()
             .to_str()
