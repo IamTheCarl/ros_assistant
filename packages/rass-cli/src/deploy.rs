@@ -6,7 +6,6 @@ use std::{
 use crate::{arguments, filter_hosts, host_config::HostConfig, load_project};
 use anyhow::{bail, Context, Result};
 use regex::Regex;
-use tempfile::NamedTempFile;
 
 pub fn deploy(build_machines: Vec<String>, args: arguments::Deploy) -> Result<()> {
     let (project_root, ssh_config) = load_project(args.project_root)?;
@@ -303,98 +302,24 @@ fn build_installer(
     args: arguments::InstallerISO,
 ) -> Result<()> {
     log::info!("Building installer ISO images.");
-    log::info!("Project root: {:?}", project_root);
-    let host_configurations = HostConfig::load_project_hosts(&project_root)
-        .context("Failed to load configuration for project hosts.")?;
 
-    for host in filter_hosts(host_configurations.iter(), host_filter)? {
-        // We already checked during the host config loading that this is UTF8 encoded.
-        let host_file_path = project_root
-            .canonicalize()
-            .context("Failed to get absolute path to project root directory")?
-            .join("hosts")
-            .join(format!("{}.nix", host.hostname))
-            .to_str()
-            .unwrap()
-            .to_string();
+    let context = DeployContext::new(
+        build_machines,
+        host_filter,
+        ssh_config,
+        project_root,
+        args.link_path.as_ref().map(|p| p.as_path()),
+    )
+    .context("Failed to initalize build")?;
 
-        log::info!("Building '{}'", host_file_path);
+    context.run_against_hosts(|host| {
+        context.run_build(
+            host,
+            &format!(".#nixosConfigurations.{host}.config.system.build.installer"),
+        )
+    })?;
 
-        let mut command = Command::new("nix-build");
-        let ssh_config = ssh_config
-            .as_os_str()
-            .to_str()
-            .context("Path to SSH config could not be encoded as UTF8")?;
-        command.env("NIX_SSHOPTS", format!("-F {}", ssh_config));
-
-        // Configure builders.
-        populate_build_mache_args(&mut command, &build_machines);
-
-        // Configure output path.
-        let output_directory = args
-            .link_path
-            .clone()
-            .unwrap_or_else(|| project_root.join("result").join(&host.hostname));
-        if output_directory.exists() {
-            std::fs::remove_dir_all(&output_directory)
-                .context("Failed to remove old result output.")?;
-        }
-
-        command.arg("--out-link");
-        command.arg(output_directory);
-
-        // Configure for building ISO.
-        command.arg("<nixpkgs/nixos>");
-
-        // We can only pass our builder script as a file, so we need a tempfile.
-        let mut installer_iso_build_file =
-            NamedTempFile::new().context("Failed to create tempfile for ISO builder script")?;
-
-        let target_device = host.ros_assistant.target_device.as_ref().context(
-            "No installation target specified. Please set `option.ros_assistant.target_device`",
-        )?;
-
-        // let install_script_content = installer_iso_script
-        //     .replace(
-        //         "target_arch",
-        //         &format!("\"{}\"", host.ros_assistant.arch.as_nix_system_str()),
-        //     )
-        //     .replace("target_device", &format!("\"{}\"", &target_device))
-        //     .replace("target_config", host_file_path.as_str());
-
-        // installer_iso_build_file
-        //     .write_all(install_script_content.as_bytes())
-        //     .context("Failed to write content to ISO builder script tempfile")?;
-        let installer_iso_path = installer_iso_build_file
-            .path()
-            .to_str()
-            .context("Path to ISO builder script tempfile is not UTF8 encodable")?;
-
-        command.args([
-            "--option",
-            "system",
-            host.ros_assistant.arch.as_nix_system_str(),
-        ]);
-        command.args(["-A", "config.system.build.isoImage"]);
-        command.arg("-I");
-        command.arg(format!("nixos-config={}", installer_iso_path));
-
-        let mut child = command
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()
-            .context("Failed to spawn nix-build.")?;
-
-        let result = child
-            .wait()
-            .context("Failed to wait for nix-build to complete.")?;
-
-        if !result.success() {
-            log::error!("Build unsuccessful.");
-        } else {
-            log::info!("Build successful.");
-        }
-    }
+    log::info!("Build successful.");
 
     Ok(())
 }
