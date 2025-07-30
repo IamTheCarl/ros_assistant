@@ -1,4 +1,4 @@
-{ pkgs ? import ../../nix/ros.nix { } }:
+{ pkgs ? import <nixpkgs> { } }:
 pkgs.rosPackages.humble.buildRosPackage {
   pname = "create_bridge_interface";
   version = "0.1.0";
