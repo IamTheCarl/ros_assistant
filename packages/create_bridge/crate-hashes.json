@@ -1,8 +1,1 @@
-{
-  "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#r2r@0.9.0": "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh",
-  "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#r2r_actions@0.9.0": "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh",
-  "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#r2r_common@0.9.0": "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh",
-  "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#r2r_macros@0.9.0": "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh",
-  "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#r2r_msg_gen@0.9.0": "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh",
-  "git+https://github.com/IamTheCarl/r2r.git?branch=parameter_try_into#r2r_rcl@0.9.0": "082fqzdfaprypy0qczkzi5w25jnfp8zvf4r54z8bhm9l9fi09gqh"
-}
+{}
