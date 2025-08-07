@@ -3,7 +3,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::{arguments, filter_hosts, host_config::HostConfig, load_project};
+use crate::{arguments, load_project};
 use anyhow::{bail, Context, Result};
 use regex::Regex;
 
@@ -41,90 +41,6 @@ pub fn deploy(build_machines: Vec<String>, args: arguments::Deploy) -> Result<()
         )
         .context("Failed to build disk image"),
     }
-}
-
-fn deploy_ssh<'a>(
-    build_machines: Vec<String>,
-    project_root: PathBuf,
-    host_filter: Option<&str>,
-    ssh_config: PathBuf,
-    args: arguments::SshDeploy,
-) -> Result<()> {
-    let host_configurations = HostConfig::load_project_hosts(&project_root)
-        .context("Failed to load configuration for project hosts.")?;
-    let deployment_order = HostConfig::determine_deployment_order(&host_configurations)
-        .context("Failed to determine deployment order.")?;
-
-    // Indexing the host configurations should never panic because the deployment was generated from the host configuration list.
-    for host in filter_hosts(
-        deployment_order.iter().map(|i| &host_configurations[*i]),
-        host_filter,
-    )? {
-        // We already checked during the host config loading that this is UTF8 encoded.
-        let host_file_path = project_root
-            .join("hosts")
-            .join(format!("{}.nix", host.hostname))
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        log::info!("Building '{}'", host_file_path);
-
-        let mut command = Command::new("nixos-rebuild");
-
-        let ssh_config = ssh_config
-            .as_os_str()
-            .to_str()
-            .context("Path to SSH config could not be encoded as UTF8")?;
-        command.env("NIX_SSHOPTS", format!("-F {}", ssh_config));
-
-        // Configure builders.
-        populate_build_mache_args(&mut command, &build_machines);
-
-        // Are we committing this as a boot configuration or just a test?
-        if args.switch {
-            command.arg("switch");
-        } else {
-            command.arg("test");
-        }
-
-        // Configure architecture.
-        command.args([
-            "--option",
-            "system",
-            host.ros_assistant.arch.as_nix_system_str(),
-        ]);
-
-        // Host config file.
-        command.arg("-I");
-        command.arg(format!("nixos-config={}", host_file_path));
-
-        // Configure target host.
-        command.arg("--target-host");
-        command.arg(
-            args.destination
-                .clone()
-                .unwrap_or_else(|| format!("root@{}", host.hostname)),
-        );
-
-        let mut child = command
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()
-            .context("Failed to spawn nixos-rebuild.")?;
-
-        let result = child
-            .wait()
-            .context("Failed to wait for nixos-rebuild to complete.")?;
-
-        if !result.success() {
-            log::error!("Deploy unsuccessful.");
-        } else {
-            log::info!("Deploy successful.");
-        }
-    }
-
-    Ok(())
 }
 
 struct DeployContext {
@@ -208,7 +124,52 @@ impl DeployContext {
         }
     }
 
+    fn deploy_ssh(&self, host: &str, hostname: &str, switch: bool) -> Result<()> {
+        log::info!("Deploying {host} to {hostname}");
+
+        let mut command = Command::new("nixos-rebuild");
+        command.env("NIX_SSHOPTS", format!("-F {}", self.ssh_config_path));
+        command.current_dir(&self.project_root);
+
+        // Configure builders.
+        let build_machine_list = self.build_machines.join(";");
+        command.arg("--builders");
+        command.arg(build_machine_list);
+
+        // Are we committing this as a boot configuration or just a test?
+        if switch {
+            command.arg("switch");
+        } else {
+            command.arg("test");
+        }
+
+        // Configure target host.
+        command.arg("--flake");
+        command.arg(format!(".#{host}"));
+
+        command.arg("--target-host");
+        command.arg(hostname);
+
+        let mut child = command
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .context("Failed to spawn nixos-rebuild.")?;
+
+        let result = child
+            .wait()
+            .context("Failed to wait for nixos-rebuild to complete.")?;
+
+        if !result.success() {
+            bail!("`nixos-rebuild` returned non-zero output.");
+        } else {
+            Ok(())
+        }
+    }
+
     fn run_build(&self, host: &str, target: &str) -> Result<()> {
+        log::info!("Building '{}'", host);
+
         let mut command = Command::new("nix");
         command.env("NIX_SSHOPTS", format!("-F {}", self.ssh_config_path));
         command.current_dir(&self.project_root);
@@ -247,21 +208,63 @@ impl DeployContext {
         }
     }
 
-    fn run_against_hosts(&self, mut to_run: impl FnMut(&str) -> Result<()>) -> Result<()> {
-        let host_list = self
+    fn run_against_hosts(
+        &self,
+        list_check: impl Fn(&[String]) -> Result<()>,
+        mut to_run: impl FnMut(&str) -> Result<()>,
+    ) -> Result<()> {
+        let mut host_list = self
             .get_hosts_list()
             .context("Failed to get list of hosts from flake.nix")?;
 
-        let hosts = host_list
-            .iter()
-            .filter(move |host| self.host_filter.captures(host).is_some());
+        host_list.retain(move |host| self.host_filter.captures(host).is_some());
 
-        for host in hosts {
+        list_check(&host_list)?;
+
+        for host in host_list.iter() {
             to_run(host).with_context(|| format!("Error while processing host {host}"))?;
         }
 
         Ok(())
     }
+}
+
+fn deploy_ssh<'a>(
+    build_machines: Vec<String>,
+    project_root: PathBuf,
+    host_filter: Option<&str>,
+    ssh_config: PathBuf,
+    args: arguments::SshDeploy,
+) -> Result<()> {
+    let context = DeployContext::new(build_machines, host_filter, ssh_config, project_root, None)
+        .context("Failed to initalize build")?;
+
+    context.run_against_hosts(
+        |list| {
+            if args.destination.is_some() {
+                if list.len() == 1 {
+                    Ok(())
+                } else {
+                    bail!("Host name can only be overriden when deploying to a single host. Use a host filter to limit to a single host.")
+                }
+            } else {
+                Ok(())
+            }
+        },
+        |host| {
+            let hostname = args
+                .destination
+                .clone()
+                .unwrap_or_else(|| format!("root@{}", host));
+            context.deploy_ssh(
+                host,
+                &hostname,
+                args.switch
+            )
+        },
+    )?;
+
+    Ok(())
 }
 
 fn build_disk_images(
@@ -282,12 +285,15 @@ fn build_disk_images(
     )
     .context("Failed to initalize build")?;
 
-    context.run_against_hosts(|host| {
-        context.run_build(
-            host,
-            &format!(".#nixosConfigurations.{host}.config.system.build.raw"),
-        )
-    })?;
+    context.run_against_hosts(
+        |_hosts| Ok(()),
+        |host| {
+            context.run_build(
+                host,
+                &format!(".#nixosConfigurations.{host}.config.system.build.raw"),
+            )
+        },
+    )?;
 
     log::info!("Build successful.");
 
@@ -312,12 +318,15 @@ fn build_installer(
     )
     .context("Failed to initalize build")?;
 
-    context.run_against_hosts(|host| {
-        context.run_build(
-            host,
-            &format!(".#nixosConfigurations.{host}.config.system.build.installer"),
-        )
-    })?;
+    context.run_against_hosts(
+        |_list| Ok(()),
+        |host| {
+            context.run_build(
+                host,
+                &format!(".#nixosConfigurations.{host}.config.system.build.installer"),
+            )
+        },
+    )?;
 
     log::info!("Build successful.");
 

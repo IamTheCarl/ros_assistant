@@ -13,8 +13,17 @@
     flake-utils.url  = "github:numtide/flake-utils";
 
     # Provides Create interface for Roomba.
+    create-bridge .url = "../../../create_bridge";
+    create-bridge.inputs.nix-ros-overlay.follows = "nix-ros-overlay";
+    create-bridge.inputs.nixpkgs.follows = "nixpkgs";
+
+    # Provides Create interface with cmd-vel topic. 
     create-cmd-vel.url = "../../../create_cmd_vel";
     create-cmd-vel.inputs.nix-ros-overlay.follows = "nix-ros-overlay";
+    create-cmd-vel.inputs.nixpkgs.follows = "nixpkgs";
+
+    ros_assistant.url = "../..";
+    ros_assistant.inputs.nixpkgs.follows = "nixpkgs";
   };
   
   # Save yourself a lot of build time and use the ROS nix cache.
@@ -36,7 +45,9 @@
     nixpkgs,
     nixos-hardware,
     flake-utils,
+    create-bridge,
     create-cmd-vel,
+    ros_assistant,
     ...
   }: {
     # You can have a configuration for each computer within the robot.
@@ -71,6 +82,7 @@
               # configuration file.
               useNetworkd = false;
               networkmanager.enable = true;
+	      hostName = "rosetta";
 
               firewall.enable = true;
             };
@@ -117,19 +129,26 @@
             video.members = [ "ros" ];
           };
 
-          services.ros2 = {
+          services.ros2 =
+	  let
+	    autonomy_env = (pkgs.rosPackages.humble.buildEnv {
+              paths = [
+                pkgs.rosPackages.humble.ros-core
+                pkgs.rosPackages.humble.joy
+                pkgs.rosPackages.humble.teleop-twist-joy
+                create-bridge.packages.aarch64-linux.default
+	        create-cmd-vel.packages.aarch64-linux.default
+              ];
+            });
+	  in
+	  {
             enable = true;
             distro = "humble";
             domainId = 0;
             nodes = {
               # Bridges ROS and the iRobot Create interface.
               create_bridge = {
-                env = (pkgs.rosPackages.humble.buildEnv {
-                  paths = [
-                    # pkgs.rosPackages.humble.ros-core
-                    # (pkgs.callPackage ../../../../create_bridge)
-                  ];
-                });
+                env = autonomy_env;
                 package = "create_bridge";
                 node = "create_bridge";
                 args = [ ];
@@ -140,12 +159,7 @@
               };
               # Provides joystick messages from a locally connected joystick.
               joy = {
-                env = (pkgs.rosPackages.humble.buildEnv {
-                  paths = [
-                    pkgs.rosPackages.humble.ros-core
-                    pkgs.rosPackages.humble.joy
-                  ];
-                });
+                env = autonomy_env;
                 package = "joy";
                 node = "joy_node";
                 args = [ ];
@@ -154,12 +168,7 @@
               };
               # Converts Joystick messages into velocity commands.
               teleop-twist-joy = {
-                env = (pkgs.rosPackages.humble.buildEnv {
-                  paths = [
-                    pkgs.rosPackages.humble.ros-core
-                    pkgs.rosPackages.humble.teleop-twist-joy
-                  ];
-                });
+                env = autonomy_env;
                 package = "teleop_twist_joy";
                 node = "teleop_node";
                 args = [ ];
@@ -176,12 +185,7 @@
               };
               # Converts velocity commands into Create 2 movement commands.
               create_cmd_vel = {
-                env = (pkgs.rosPackages.humble.buildEnv {
-                  paths = [
-                    pkgs.rosPackages.humble.ros-core
-		    create-cmd-vel.packages.aarch64-linux.default
-                  ];
-                });
+                env = autonomy_env;
                 package = "create_cmd_vel";
                 node = "create_cmd_vel";
                 args = [ ];
@@ -208,6 +212,7 @@
           pkgs.rosPackages.humble.joy
           pkgs.rosPackages.humble.teleop-twist-joy
           pkgs.rosPackages.humble.rviz2
+          ros_assistant.packages.${system}.default
           (pkgs.callPackage ../../../create_bridge_interface { })
 	];
       };

@@ -1,14 +1,12 @@
 use std::path::PathBuf;
 
 use anyhow::{bail, Context, Result};
-use regex::Regex;
 
-use crate::{firewall::firewall, host_config::HostConfig};
+use crate::firewall::firewall;
 
 mod arguments;
 mod deploy;
 mod firewall;
-mod host_config;
 mod ssh;
 
 fn main() {
@@ -38,16 +36,6 @@ fn application(args: arguments::RosAssistant) -> Result<()> {
 
 fn new_project(_args: arguments::NewProject) -> Result<()> {
     bail!("New project sub-command is not yet implemented.")
-}
-
-fn filter_hosts<'a>(
-    hosts: impl Iterator<Item = &'a HostConfig>,
-    filter: Option<&'a str>,
-) -> Result<impl Iterator<Item = &'a HostConfig>> {
-    let regex = Regex::new(filter.unwrap_or(".*"))
-        .context("Failed to compile regex expression for host filter")?;
-
-    Ok(hosts.filter(move |host| regex.captures(&host.hostname).is_some()))
 }
 
 fn load_project(project_root: Option<PathBuf>) -> Result<(PathBuf, PathBuf)> {

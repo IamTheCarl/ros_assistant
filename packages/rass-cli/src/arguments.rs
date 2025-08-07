@@ -62,7 +62,7 @@ pub struct SshDeploy {
     pub switch: bool,
 
     #[argh(option)]
-    /// override the default ssh destination
+    /// override the default ssh destination (only works if deploying to a single host)
     pub destination: Option<String>,
 }
 
