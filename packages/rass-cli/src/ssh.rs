@@ -2,7 +2,7 @@ use std::process::{Command, Stdio};
 
 use anyhow::{bail, Context, Result};
 
-use crate::{arguments, load_project};
+use crate::arguments;
 
 pub fn ssh(args: arguments::SshCommand) -> Result<()> {
     todo!()

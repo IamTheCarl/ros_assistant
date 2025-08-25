@@ -42,21 +42,6 @@ fn new_project(_args: arguments::NewProject) -> Result<()> {
     bail!("New project sub-command is not yet implemented.")
 }
 
-fn load_project(project_root: Option<PathBuf>) -> Result<(PathBuf, PathBuf)> {
-    let project_root = project_root
-        .map(Ok)
-        .unwrap_or_else(|| std::env::current_dir().context("Failed to get current directory"))?;
-
-    log::info!("Project root: {:?}", project_root);
-
-    let ssh_config = project_root.join("ssh_config");
-    if !ssh_config.exists() {
-        bail!("Project is missing `ssh_config` file.");
-    }
-
-    Ok((project_root, ssh_config))
-}
-
 pub struct ProjectContext {
     build_machines: Vec<String>,
     host_filter: Regex,
@@ -66,6 +51,34 @@ pub struct ProjectContext {
 }
 
 impl ProjectContext {
+    fn load_project(
+        build_machines: Vec<String>,
+        project_root: Option<PathBuf>,
+        host_filter: Option<&str>,
+        link_path: Option<&Path>,
+    ) -> Result<Self> {
+        let project_root = project_root.map(Ok).unwrap_or_else(|| {
+            std::env::current_dir().context("Failed to get current directory")
+        })?;
+
+        log::info!("Project root: {:?}", project_root);
+
+        let ssh_config = project_root.join("ssh_config");
+        if !ssh_config.exists() {
+            log::warn!("Project is missing `ssh_config` file. File will be created for you.");
+            // It's fine for the default to just be empty.
+            std::fs::write(&ssh_config, "").context("Failed to craete `ssh_config` file.")?;
+        }
+
+        Self::new(
+            build_machines,
+            host_filter,
+            ssh_config,
+            project_root,
+            link_path,
+        )
+    }
+
     fn new(
         build_machines: Vec<String>,
         host_filter: Option<&str>,

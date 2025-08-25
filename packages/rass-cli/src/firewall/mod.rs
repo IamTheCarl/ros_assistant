@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use dns_lookup::lookup_host;
 use local_ip_address::list_afinet_netifas;
 
-use crate::{arguments::firewall, load_project};
+use crate::arguments::firewall;
 
 pub fn firewall(args: firewall::Command) -> Result<()> {
     todo!()
