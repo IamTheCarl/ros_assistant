@@ -97,6 +97,10 @@ pub struct SshCommand {
 
     #[argh(positional)]
     pub host: Option<String>,
+
+    #[argh(option, short = 'c')]
+    /// run a command on the host.
+    pub command: Option<String>,
 }
 
 pub mod firewall {

@@ -254,4 +254,53 @@ impl ProjectContext {
 
         Ok(())
     }
+
+    fn select_default_host(&self) -> Result<String> {
+        let mut hosts = self.get_hosts_list().context("Failed to get host list")?;
+        let host = hosts.pop();
+
+        // If there's only one host on the robot, just assume it's that one.
+        if hosts.is_empty() {
+            if let Some(host) = host {
+                Ok(host)
+            } else {
+                bail!("No hosts available for this robot. Please add a host configuration to flake.nix");
+            }
+        } else {
+            bail!(
+                "Multiple hosts are available for this robot. Select one with the `--host` argument."
+            );
+        }
+    }
+
+    fn run_ssh(&self, host: &str, arg: Option<&str>) -> Result<()> {
+        let mut command = Command::new("ssh");
+        command.arg("-F");
+        command.arg(&self.ssh_config_path);
+        command.arg(host);
+
+        // We can automatically run a command.
+        // If no argument is provided, we will spawn an interactive terminal.
+        if let Some(arg) = arg {
+            command.arg(arg);
+        }
+
+        let mut child = command
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .stdin(Stdio::inherit())
+            .spawn()
+            .context("Failed to spawn ssh.")?;
+
+        let result = child
+            .wait()
+            .context("Failed to wait for ssh to complete.")?;
+
+        if !result.success() {
+            bail!("Ssh unsuccessful.");
+        } else {
+            log::info!("Ssh successful.");
+            Ok(())
+        }
+    }
 }

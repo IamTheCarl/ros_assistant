@@ -1,64 +1,34 @@
-use std::{
-    fmt::Write,
-    net::IpAddr,
-    process::{Command, Stdio},
-};
+use std::{fmt::Write, net::IpAddr};
 
 use anyhow::{Context, Result};
 use dns_lookup::lookup_host;
 use local_ip_address::list_afinet_netifas;
 
-use crate::arguments::firewall;
+use crate::{arguments::firewall, ProjectContext};
 
 pub fn firewall(args: firewall::Command) -> Result<()> {
-    todo!()
-    // let (project_root, ssh_config) = load_project(args.project_root)?;
-    // let host_configurations = HostConfig::load_project_hosts(&project_root)
-    //     .context("Failed to load configuration for project hosts.")?;
+    let host_filter = args.hosts.as_ref().map(|s| s.as_str());
+    if let Some(host_filter) = host_filter {
+        log::info!("Using host filter `{host_filter}`");
+    }
 
-    // let host_filter = args.hosts.as_ref().map(|s| s.as_str());
-    // if let Some(host_filter) = host_filter {
-    //     log::info!("Using host filter `{host_filter}`");
-    // }
+    let context = ProjectContext::load_project(vec![], args.project_root, host_filter, None)
+        .context("Failed to initalize build")?;
 
-    // for host in filter_hosts(host_configurations.iter(), host_filter)? {
-    //     let mut command = Command::new("ssh");
-    //     command.arg("-F");
-    //     command.arg(&ssh_config);
-    //     command.arg(&host.hostname);
+    let command = match &args.subcommand {
+        firewall::SubCommand::Disable(_) => "systemctl stop firewall".to_string(),
+        firewall::SubCommand::Reset(_) => "systemctl restart firewall".to_string(),
+        firewall::SubCommand::Pierce(pierce) => generate_pierce_commands(pierce)
+            .context("Failed to generate command to run on remote system")?,
+    };
 
-    //     match &args.subcommand {
-    //         firewall::SubCommand::Disable(_) => {
-    //             command.arg("systemctl stop firewall");
-    //         }
-    //         firewall::SubCommand::Reset(_) => {
-    //             command.arg("systemctl restart firewall");
-    //         }
-    //         firewall::SubCommand::Pierce(pierce) => {
-    //             let ip_table_command = generate_pierce_commands(pierce)
-    //                 .context("Failed to generate command to run on remote system")?;
-    //             command.arg(ip_table_command);
-    //         }
-    //     }
+    context.run_against_hosts(
+        |_| Ok(()),
+        |host| context.run_ssh(host, Some(command.as_str())),
+    )?;
 
-    //     let mut child = command
-    //         .stdout(Stdio::inherit())
-    //         .stderr(Stdio::inherit())
-    //         .stdin(Stdio::inherit())
-    //         .spawn()
-    //         .context("Failed to spawn ssh.")?;
-
-    //     let result = child
-    //         .wait()
-    //         .context("Failed to wait for ssh to complete.")?;
-
-    //     if !result.success() {
-    //         log::error!("Operation unsuccessful.");
-    //     } else {
-    //         log::info!("Operation successful.");
-    //     }
-    // }
-    // Ok(())
+    log::info!("Request completed successfully");
+    Ok(())
 }
 
 fn generate_pierce_commands(command: &firewall::Pierce) -> Result<String> {
