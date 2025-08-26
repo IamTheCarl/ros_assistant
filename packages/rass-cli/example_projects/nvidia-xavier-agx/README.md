@@ -4,7 +4,7 @@ I have an NVidia Xavier AGX devkit. It was a mistake. I do not recommend it. The
 
 ## Setup
 
-You need to install UEFI compatible firmware to your Xavier. [Start here](https://github.com/anduril/jetpack-nixos) to do that. Once you have the UEFI firmware installed, you're done there. You don't need to install NixOS. Once you have the firmware setup, you can generate the disk image from this project and write it to an SD card. Boot off the SD Card.
+You need to install UEFI compatible firmware to your Xavier. [Start here](https://github.com/anduril/jetpack-nixos) to do that. Note that the `lsusb` and `flash-xavier-agx-devkit` are provided by the development shell, which you can access by running `nix develop`. Once you have the UEFI firmware installed, you're done there. You don't need to install NixOS. Once you have the firmware setup, you can generate the disk image from this project and write it to an SD card. Boot off the SD Card.
 
 By the way, this will take *hours* to build, so sit tight and be patient.
 

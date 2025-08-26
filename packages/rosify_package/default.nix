@@ -1,8 +1,4 @@
 { pkgs ? import <nixpkgs> { }, pname, version, to_rosify, message_packages ? [ ], description, license }:
-let
-  pkgs = import ../../nix/ros.nix { pkgs = pkgs; };
-  executable = import ./executable.nix { };
-in
 pkgs.rosPackages.humble.buildRosPackage rec {
   inherit pname version;
 
