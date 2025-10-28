@@ -203,7 +203,7 @@ impl ProjectContext {
         }
     }
 
-    async fn run_build(&self, host: &str, target: &str) -> Result<()> {
+    async fn run_build(&self, host: &str, target: &str) -> Result<PathBuf> {
         log::info!("Building '{}'", host);
 
         let mut command = Command::new("nix");
@@ -222,7 +222,7 @@ impl ProjectContext {
         command.arg("build");
 
         command.arg("--out-link");
-        command.arg(output_directory);
+        command.arg(output_directory.clone());
 
         // Specify which output to build.
         command.arg(target);
@@ -241,7 +241,7 @@ impl ProjectContext {
         if !result.success() {
             bail!("`nix build` returned non-zero output.");
         } else {
-            Ok(())
+            Ok(output_directory)
         }
     }
 

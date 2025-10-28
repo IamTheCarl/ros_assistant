@@ -50,7 +50,8 @@ pub struct Deploy {
 pub enum DeployType {
     Ssh(SshDeploy),
     DiskImage(DiskImage),
-    InstallerIso(InstallerISO),
+    InstallerIso(InstallISO),
+    Netboot(InstallNetboot),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -80,12 +81,20 @@ pub struct DiskImage {
 /// This image can be written to a USB drive or burned to a CD/DVD. Note that this
 /// image is DESTRUCTIVE to any machine it is deployed on, as it will overwrite any
 /// content on the target hard drive.
-#[argh(subcommand, name = "installer")]
-pub struct InstallerISO {
+#[argh(subcommand, name = "install-iso")]
+pub struct InstallISO {
     #[argh(option)]
     /// override the default link path for the project
     pub link_path: Option<PathBuf>,
 }
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Build an ISO image for performing unattended installations of the disk image.
+/// This image can be written to a USB drive or burned to a CD/DVD. Note that this
+/// image is DESTRUCTIVE to any machine it is deployed on, as it will overwrite any
+/// content on the target hard drive.
+#[argh(subcommand, name = "install-netboot")]
+pub struct InstallNetboot {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Ssh into your robot's computer.
