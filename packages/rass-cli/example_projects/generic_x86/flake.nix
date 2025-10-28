@@ -6,18 +6,13 @@
   };
   outputs = { self, nixpkgs, ... }:
   {
-    ros_assistant = {
-      # The device the unattended installation ISO will install the OS to.
-      # You can leave this unspecified if you do not intend to do unattended installations.
-      generic-x86.target_device = "/dev/sda";
-    };
-
     nixosConfigurations.generic-x86 = nixpkgs.lib.nixosSystem {  
       system = "x86_64-linux";
       modules = [
         ../../nix_modules/basic_boot.nix
 	../../nix_modules/installer_iso.nix
 	../../nix_modules/installer_netboot.nix
+	../../nix_modules/auto_revert.nix
         ({ pkgs, lib, config, ...}: {
           system.stateVersion = "25.05";
 
