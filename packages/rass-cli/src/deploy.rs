@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::{arguments, ProjectContext};
 use anyhow::{bail, Context, Result};
 
-pub fn deploy(build_machines: Vec<String>, args: arguments::Deploy) -> Result<()> {
+pub async fn deploy(build_machines: Vec<String>, args: arguments::Deploy) -> Result<()> {
     let host_filter = args.hosts.as_ref().map(|s| s.as_str());
     if let Some(host_filter) = host_filter {
         log::info!("Using host filter `{host_filter}`");
@@ -12,26 +12,30 @@ pub fn deploy(build_machines: Vec<String>, args: arguments::Deploy) -> Result<()
     match args.deploy_type {
         arguments::DeployType::Ssh(ssh_args) => {
             deploy_ssh(build_machines, args.project_root, host_filter, ssh_args)
+                .await
                 .context("Failed to deploy")
         }
         arguments::DeployType::DiskImage(disk_args) => {
             build_disk_images(build_machines, args.project_root, host_filter, disk_args)
+                .await
                 .context("Failed to build disk image")
         }
         arguments::DeployType::InstallerIso(iso_args) => {
             build_installer(build_machines, args.project_root, host_filter, iso_args)
+                .await
                 .context("Failed to build disk image")
         }
     }
 }
 
-fn deploy_ssh<'a>(
+async fn deploy_ssh<'a>(
     build_machines: Vec<String>,
     project_root: Option<PathBuf>,
     host_filter: Option<&str>,
     args: arguments::SshDeploy,
 ) -> Result<()> {
     let context = ProjectContext::load_project(build_machines, project_root, host_filter, None)
+        .await
         .context("Failed to initalize build")?;
 
     context.run_against_hosts(
@@ -46,7 +50,7 @@ fn deploy_ssh<'a>(
                 Ok(())
             }
         },
-        |host| {
+        async |host| {
             let hostname = args
                 .destination
                 .clone()
@@ -55,14 +59,14 @@ fn deploy_ssh<'a>(
                 host,
                 &hostname,
                 args.switch
-            )
+            ).await
         },
-    )?;
+    ).await?;
 
     Ok(())
 }
 
-fn build_disk_images(
+async fn build_disk_images(
     build_machines: Vec<String>,
     project_root: Option<PathBuf>,
     host_filter: Option<&str>,
@@ -76,24 +80,29 @@ fn build_disk_images(
         host_filter,
         args.link_path.as_ref().map(|p| p.as_path()),
     )
+    .await
     .context("Failed to initalize build")?;
 
-    context.run_against_hosts(
-        |_hosts| Ok(()),
-        |host| {
-            context.run_build(
-                host,
-                &format!(".#nixosConfigurations.{host}.config.system.build.raw"),
-            )
-        },
-    )?;
+    context
+        .run_against_hosts(
+            |_hosts| Ok(()),
+            async |host| {
+                context
+                    .run_build(
+                        host,
+                        &format!(".#nixosConfigurations.{host}.config.system.build.raw"),
+                    )
+                    .await
+            },
+        )
+        .await?;
 
     log::info!("Build successful.");
 
     Ok(())
 }
 
-fn build_installer(
+async fn build_installer(
     build_machines: Vec<String>,
     project_root: Option<PathBuf>,
     host_filter: Option<&str>,
@@ -107,17 +116,22 @@ fn build_installer(
         host_filter,
         args.link_path.as_ref().map(|p| p.as_path()),
     )
+    .await
     .context("Failed to initalize build")?;
 
-    context.run_against_hosts(
-        |_list| Ok(()),
-        |host| {
-            context.run_build(
-                host,
-                &format!(".#nixosConfigurations.{host}.config.system.build.installer"),
-            )
-        },
-    )?;
+    context
+        .run_against_hosts(
+            |_list| Ok(()),
+            async |host| {
+                context
+                    .run_build(
+                        host,
+                        &format!(".#nixosConfigurations.{host}.config.system.build.installer"),
+                    )
+                    .await
+            },
+        )
+        .await?;
 
     log::info!("Build successful.");
 

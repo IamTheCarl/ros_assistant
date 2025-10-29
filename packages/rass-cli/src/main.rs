@@ -1,10 +1,11 @@
 use std::{
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Stdio,
 };
 
 use anyhow::{bail, Context, Result};
 use regex::Regex;
+use tokio::process::Command;
 
 use crate::firewall::firewall;
 
@@ -13,17 +14,18 @@ mod deploy;
 mod firewall;
 mod ssh;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = argh::from_env();
 
     colog::init();
 
-    if let Err(error) = application(args) {
+    if let Err(error) = application(args).await {
         log::error!("Fatal error: {:?}", error);
     }
 }
 
-fn application(args: arguments::RosAssistant) -> Result<()> {
+async fn application(args: arguments::RosAssistant) -> Result<()> {
     log::info!("ROS Assistant CLI v{}", std::env!("CARGO_PKG_VERSION"));
 
     match args.subcommand {
@@ -31,10 +33,14 @@ fn application(args: arguments::RosAssistant) -> Result<()> {
             new_project(new_project_args).context("Failed to create new project")
         }
         arguments::SubCommand::Deploy(deploy_args) => {
-            deploy::deploy(args.build_machine, deploy_args).context("Failed to deploy project")
+            deploy::deploy(args.build_machine, deploy_args)
+                .await
+                .context("Failed to deploy project")
         }
-        arguments::SubCommand::Ssh(ssh_args) => ssh::ssh(ssh_args).context("Failed to ssh to host"),
-        arguments::SubCommand::Firewall(firewall_args) => firewall(firewall_args),
+        arguments::SubCommand::Ssh(ssh_args) => {
+            ssh::ssh(ssh_args).await.context("Failed to ssh to host")
+        }
+        arguments::SubCommand::Firewall(firewall_args) => firewall(firewall_args).await,
     }
 }
 
@@ -51,7 +57,7 @@ pub struct ProjectContext {
 }
 
 impl ProjectContext {
-    fn load_project(
+    async fn load_project(
         build_machines: Vec<String>,
         project_root: Option<PathBuf>,
         host_filter: Option<&str>,
@@ -67,7 +73,9 @@ impl ProjectContext {
         if !ssh_config.exists() {
             log::warn!("Project is missing `ssh_config` file. File will be created for you.");
             // It's fine for the default to just be empty.
-            std::fs::write(&ssh_config, "").context("Failed to craete `ssh_config` file.")?;
+            tokio::fs::write(&ssh_config, "")
+                .await
+                .context("Failed to create `ssh_config` file.")?;
         }
 
         Self::new(
@@ -124,7 +132,7 @@ impl ProjectContext {
         })
     }
 
-    fn get_hosts_list(&self) -> Result<Vec<String>> {
+    async fn get_hosts_list(&self) -> Result<Vec<String>> {
         let mut command = Command::new("nix");
         command.args([
             "eval",
@@ -134,7 +142,7 @@ impl ProjectContext {
             "pkgs: builtins.concatStringsSep \" \" (builtins.attrNames pkgs)",
         ]);
 
-        let result = command.output().context("Failed to run `nix eval`")?;
+        let result = command.output().await.context("Failed to run `nix eval`")?;
         let stderr = String::from_utf8_lossy(&result.stderr);
         if result.status.success() {
             if !result.stderr.is_empty() {
@@ -151,7 +159,7 @@ impl ProjectContext {
         }
     }
 
-    fn deploy_ssh(&self, host: &str, hostname: &str, switch: bool) -> Result<()> {
+    async fn deploy_ssh(&self, host: &str, hostname: &str, switch: bool) -> Result<()> {
         log::info!("Deploying {host} to {hostname}");
 
         let mut command = Command::new("nixos-rebuild");
@@ -185,6 +193,7 @@ impl ProjectContext {
 
         let result = child
             .wait()
+            .await
             .context("Failed to wait for nixos-rebuild to complete.")?;
 
         if !result.success() {
@@ -194,7 +203,7 @@ impl ProjectContext {
         }
     }
 
-    fn run_build(&self, host: &str, target: &str) -> Result<()> {
+    async fn run_build(&self, host: &str, target: &str) -> Result<()> {
         log::info!("Building '{}'", host);
 
         let mut command = Command::new("nix");
@@ -226,6 +235,7 @@ impl ProjectContext {
 
         let result = child
             .wait()
+            .await
             .context("Failed to wait for nix-build to complete.")?;
 
         if !result.success() {
@@ -235,13 +245,14 @@ impl ProjectContext {
         }
     }
 
-    fn run_against_hosts(
+    async fn run_against_hosts(
         &self,
         list_check: impl Fn(&[String]) -> Result<()>,
-        mut to_run: impl FnMut(&str) -> Result<()>,
+        mut to_run: impl AsyncFnMut(&str) -> Result<()>,
     ) -> Result<()> {
         let mut host_list = self
             .get_hosts_list()
+            .await
             .context("Failed to get list of hosts from flake.nix")?;
 
         host_list.retain(move |host| self.host_filter.captures(host).is_some());
@@ -249,14 +260,19 @@ impl ProjectContext {
         list_check(&host_list)?;
 
         for host in host_list.iter() {
-            to_run(host).with_context(|| format!("Error while processing host {host}"))?;
+            to_run(host)
+                .await
+                .with_context(|| format!("Error while processing host {host}"))?;
         }
 
         Ok(())
     }
 
-    fn select_default_host(&self) -> Result<String> {
-        let mut hosts = self.get_hosts_list().context("Failed to get host list")?;
+    async fn select_default_host(&self) -> Result<String> {
+        let mut hosts = self
+            .get_hosts_list()
+            .await
+            .context("Failed to get host list")?;
         let host = hosts.pop();
 
         // If there's only one host on the robot, just assume it's that one.
@@ -273,7 +289,7 @@ impl ProjectContext {
         }
     }
 
-    fn run_ssh(&self, host: &str, arg: Option<&str>) -> Result<()> {
+    async fn run_ssh(&self, host: &str, arg: Option<&str>) -> Result<()> {
         let mut command = Command::new("ssh");
         command.arg("-F");
         command.arg(&self.ssh_config_path);
@@ -294,6 +310,7 @@ impl ProjectContext {
 
         let result = child
             .wait()
+            .await
             .context("Failed to wait for ssh to complete.")?;
 
         if !result.success() {

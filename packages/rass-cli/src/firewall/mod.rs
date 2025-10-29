@@ -6,13 +6,14 @@ use local_ip_address::list_afinet_netifas;
 
 use crate::{arguments::firewall, ProjectContext};
 
-pub fn firewall(args: firewall::Command) -> Result<()> {
+pub async fn firewall(args: firewall::Command) -> Result<()> {
     let host_filter = args.hosts.as_ref().map(|s| s.as_str());
     if let Some(host_filter) = host_filter {
         log::info!("Using host filter `{host_filter}`");
     }
 
     let context = ProjectContext::load_project(vec![], args.project_root, host_filter, None)
+        .await
         .context("Failed to initalize build")?;
 
     let command = match &args.subcommand {
@@ -22,10 +23,12 @@ pub fn firewall(args: firewall::Command) -> Result<()> {
             .context("Failed to generate command to run on remote system")?,
     };
 
-    context.run_against_hosts(
-        |_| Ok(()),
-        |host| context.run_ssh(host, Some(command.as_str())),
-    )?;
+    context
+        .run_against_hosts(
+            |_| Ok(()),
+            async |host| context.run_ssh(host, Some(command.as_str())).await,
+        )
+        .await?;
 
     log::info!("Request completed successfully");
     Ok(())
