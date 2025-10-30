@@ -1,0 +1,3 @@
+Host generic-x86
+    HostName generic-x86.lan
+    User root
