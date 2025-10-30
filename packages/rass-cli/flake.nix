@@ -37,7 +37,6 @@
 
 	  shellHook = ''
             export SHELL=${pkgs.bashInteractive}/bin/bash
-	    export PIXIECORE_PATH=${pixiecore}/bin/pixiecore
           '';
         };
 
@@ -47,7 +46,6 @@
               src = craneLib.cleanCargoSource ./.;
           
 	      strictDeps = true;
-	      PIXIECORE_PATH="${pixiecore}/bin/pixiecore";
          
               propagatedBuildInputs = [
                 pkgs.nix
@@ -64,37 +62,8 @@
               mkdir -p $out/bin
               cp ${package}/bin/cli $out/bin/rass
               wrapProgram $out/bin/rass \
-                --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin
+                --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin:{}
 	    '';
-	# packages.default = with pkgs;
-        #   let
-        #     cargo_nix = pkgs.callPackage ./Cargo.nix { };
-        #     package = cargo_nix.rootCrate.build;
-        #   in
-	#   pkgs.stdenv.mkDerivation {
-        #     pname = package.name;
-        #     version = package.version;
-        #     nativeBuildInputs = [
-        #       pkgs.makeWrapper
-        #     ];
-        #   
-        #     propagatedBuildInputs = [
-        #       pkgs.nix
-        #       pkgs.openssh
-	#       pkgs.pixiecore
-        #     ];
-
-	#     PIXIECORE_PATH="${pixiecore}/bin/pixiecore";
-        #   
-        #     phases = [ "installPhase" ];
-        #   
-        #     postInstall = ''
-        #       mkdir -p $out/bin
-        #       cp ${package}/bin/cli $out/bin/rass
-        #       wrapProgram $out/bin/rass \
-        #         --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin
-        #     '';
-        #   };
       }
     );
 }

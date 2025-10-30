@@ -173,10 +173,6 @@ async fn install_netboot<'a>(
                     .canonicalize()
                     .context("Failed to canonicalize path to PXE boot dependencies")?;
 
-                // If this fails, it's because you didn't build under the `nix develop`
-                // environment.
-                let pixiecore_path = std::env!("PIXIECORE_PATH");
-
                 let mut command = Command::new("sudo");
 
 // sudo pixiecore boot /nix/store/5dj4xbjgmq1kz3ny2dlmvzpmvdx84zbc-linux-6.12.38/bzImage /nix/store/yiiw7llmb3hc3s04rs63kbbh0iz4ikgx-initrd/initrd --cmdline "init=/nix/store/1sw1g2c753wkqmqnsgn8c7vkgj5mw28h-nixos-system-nixos-kexec-25.11pre-git/init loglevel=4" --port 64172 --status-port 64172
@@ -185,7 +181,7 @@ async fn install_netboot<'a>(
                 let initrd = output_directory.join("netbootRamdisk/initrd").canonicalize().context("Failed to canonicalize initrd path")?;
                 let root_filesystem = output_directory.join("toplevel/init").canonicalize().context("Failed to canonicalize path to root filesystem")?;
 
-                command.arg(pixiecore_path);
+                command.arg("pixiecore");
                 command.arg("boot");
                 command.arg(kernel);
                 command.arg(initrd);
