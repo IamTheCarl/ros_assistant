@@ -5,15 +5,17 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url  = "github:numtide/flake-utils";
+    crane.url = "github:ipetkov/crane";
   };
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
+  outputs = { self, nixpkgs, rust-overlay, flake-utils, crane, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+	craneLib = crane.mkLib pkgs;
       in
       {
         devShells.default = with pkgs; mkShell {
@@ -39,35 +41,60 @@
           '';
         };
 
-	packages.default = with pkgs;
-          let
-            cargo_nix = pkgs.callPackage ./Cargo.nix { };
-            package = cargo_nix.rootCrate.build;
-          in
-	  pkgs.stdenv.mkDerivation {
-            pname = package.name;
-            version = package.version;
-            nativeBuildInputs = [
-              pkgs.makeWrapper
-            ];
+        packages.default =  with pkgs;
+	  let
+	    package = craneLib.buildPackage {
+              src = craneLib.cleanCargoSource ./.;
           
-            propagatedBuildInputs = [
-              pkgs.nix
-              pkgs.openssh
-	      pkgs.pixiecore
-            ];
-
-	    PIXIECORE_PATH="${pixiecore}/bin/pixiecore";
-          
-            phases = [ "installPhase" ];
-          
-            postInstall = ''
+	      strictDeps = true;
+	      PIXIECORE_PATH="${pixiecore}/bin/pixiecore";
+         
+              propagatedBuildInputs = [
+                pkgs.nix
+                pkgs.openssh
+	        pkgs.pixiecore
+              ];
+            };
+	  in
+	    pkgs.runCommandLocal "rass-cli" {
+	      nativeBuildInputs = [
+                pkgs.makeWrapper
+              ];
+	    } ''
               mkdir -p $out/bin
               cp ${package}/bin/cli $out/bin/rass
               wrapProgram $out/bin/rass \
                 --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin
-            '';
-          };
+	    '';
+	# packages.default = with pkgs;
+        #   let
+        #     cargo_nix = pkgs.callPackage ./Cargo.nix { };
+        #     package = cargo_nix.rootCrate.build;
+        #   in
+	#   pkgs.stdenv.mkDerivation {
+        #     pname = package.name;
+        #     version = package.version;
+        #     nativeBuildInputs = [
+        #       pkgs.makeWrapper
+        #     ];
+        #   
+        #     propagatedBuildInputs = [
+        #       pkgs.nix
+        #       pkgs.openssh
+	#       pkgs.pixiecore
+        #     ];
+
+	#     PIXIECORE_PATH="${pixiecore}/bin/pixiecore";
+        #   
+        #     phases = [ "installPhase" ];
+        #   
+        #     postInstall = ''
+        #       mkdir -p $out/bin
+        #       cp ${package}/bin/cli $out/bin/rass
+        #       wrapProgram $out/bin/rass \
+        #         --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin
+        #     '';
+        #   };
       }
     );
 }
