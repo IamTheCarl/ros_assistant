@@ -24,6 +24,7 @@
           # Networking
           systemd.network.enable = true;
           networking.useNetworkd = true;
+	  networking.hostName = "generic-x86";
 
           # SSH
           systemd.services.sshd.wantedBy = pkgs.lib.mkForce [ "multi-user.target" ];
