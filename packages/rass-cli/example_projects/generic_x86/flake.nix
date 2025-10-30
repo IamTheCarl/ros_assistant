@@ -17,6 +17,7 @@
       modules = [
         ../../nix_modules/basic_boot.nix
 	../../nix_modules/installer_iso.nix
+	../../nix_modules/installer_netboot.nix
         ({ pkgs, lib, config, ...}: {
           system.stateVersion = "25.05";
 

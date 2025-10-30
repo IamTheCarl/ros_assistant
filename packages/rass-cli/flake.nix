@@ -21,6 +21,8 @@
 	    bashInteractive
             openssl
             pkg-config
+            pixiecore
+
             (rust-bin.stable.latest.default.override {
               extensions = [
                 "rust-src"
@@ -33,6 +35,7 @@
 
 	  shellHook = ''
             export SHELL=${pkgs.bashInteractive}/bin/bash
+	    export PIXIECORE_PATH=${pixiecore}/bin/pixiecore
           '';
         };
 
@@ -51,7 +54,10 @@
             propagatedBuildInputs = [
               pkgs.nix
               pkgs.openssh
+	      pkgs.pixiecore
             ];
+
+	    PIXIECORE_PATH="${pixiecore}/bin/pixiecore";
           
             phases = [ "installPhase" ];
           
