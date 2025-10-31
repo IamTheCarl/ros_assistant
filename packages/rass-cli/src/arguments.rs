@@ -62,6 +62,11 @@ pub struct SshDeploy {
     /// makes the configuration the new boot default
     pub switch: bool,
 
+    /// do not trigger the auto-revert timer (this has a risk of locking you out of your robot if
+    /// things go wrong)
+    #[argh(switch)]
+    pub no_auto_revert: bool,
+
     #[argh(option)]
     /// override the default ssh destination (only works if deploying to a single host)
     pub destination: Option<String>,

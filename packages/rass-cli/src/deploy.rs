@@ -64,7 +64,8 @@ async fn deploy_ssh<'a>(
             context.deploy_ssh(
                 host,
                 &hostname,
-                args.switch
+                args.switch,
+                !args.no_auto_revert
             ).await
         },
     ).await?;
@@ -174,8 +175,6 @@ async fn install_netboot<'a>(
                     .context("Failed to canonicalize path to PXE boot dependencies")?;
 
                 let mut command = Command::new("sudo");
-
-// sudo pixiecore boot /nix/store/5dj4xbjgmq1kz3ny2dlmvzpmvdx84zbc-linux-6.12.38/bzImage /nix/store/yiiw7llmb3hc3s04rs63kbbh0iz4ikgx-initrd/initrd --cmdline "init=/nix/store/1sw1g2c753wkqmqnsgn8c7vkgj5mw28h-nixos-system-nixos-kexec-25.11pre-git/init loglevel=4" --port 64172 --status-port 64172
 
                 let kernel = output_directory.join("kernel/bzImage").canonicalize().context("Failed to canonacalize kernel path.")?;
                 let initrd = output_directory.join("netbootRamdisk/initrd").canonicalize().context("Failed to canonicalize initrd path")?;

@@ -159,8 +159,27 @@ impl ProjectContext {
         }
     }
 
-    async fn deploy_ssh(&self, host: &str, hostname: &str, switch: bool) -> Result<()> {
+    async fn deploy_ssh(
+        &self,
+        host: &str,
+        hostname: &str,
+        switch: bool,
+        enable_auto_revert: bool,
+    ) -> Result<()> {
         log::info!("Deploying {host} to {hostname}");
+
+        if enable_auto_revert {
+            log::info!("Setting auto-revert timer using ssh.");
+            self.run_ssh(
+                host,
+                Some("mkdir -p /run/rass/auto-revert && touch /run/rass/auto-revert/set"),
+            )
+            .await
+            .context("Failed to run command to start auto-revert timer")?;
+            log::info!("Timer will start on system activation.");
+        } else {
+            log::warn!("Auto-revert timer has been disabled for this deployment");
+        }
 
         let mut command = Command::new("nixos-rebuild");
         command.env("NIX_SSHOPTS", format!("-F {}", self.ssh_config_path));
@@ -199,6 +218,13 @@ impl ProjectContext {
         if !result.success() {
             bail!("`nixos-rebuild` returned non-zero output.");
         } else {
+            // Cancel the auto-revert.
+            if enable_auto_revert {
+                log::info!("Cancelling auto-revert timer using ssh.");
+                self.run_ssh(host, Some("rm -f /run/rass/auto-revert/set"))
+                    .await
+                    .context("Failed to run command to stop auto-revert timer")?;
+            }
             Ok(())
         }
     }
