@@ -8,7 +8,7 @@ let
 in
 {
   options.auto-revert = {
-    enable = lib.mkOption {
+    enabled = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = "Enable auto-revert";
