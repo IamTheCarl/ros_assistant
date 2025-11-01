@@ -132,6 +132,49 @@ impl ProjectContext {
         })
     }
 
+    /// Checks the system configuration if a field is present and set to true.
+    /// If the value is not present, this returns false.
+    async fn check_project_config_flag(&self, host: &str, field_path: &[&str]) -> Result<bool> {
+        let mut command = Command::new("nix");
+        command.args(["eval", "--read-only", "--apply"]);
+
+        let mut iter = field_path.iter().peekable();
+        let mut query = {
+            let first = iter
+                .next()
+                .expect("Config flag needs a least one layer to the path");
+            format!("{first} or false")
+        };
+
+        while let Some(layer) = iter.next() {
+            if iter.peek().is_some() {
+                query = format!("({query}).{layer} or false");
+            } else {
+                query = format!("(config.{query}).{layer} or false");
+            }
+        }
+
+        command.arg(format!("config: {query}"));
+        command.arg(format!(".#nixosConfigurations.{host}.config"));
+
+        let result = command.output().await.context("Failed to run `nix eval`")?;
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        if result.status.success() {
+            let mut output = String::from_utf8(result.stdout)
+                .context("`nix eval` output is not utf8 encoded text")?;
+            output.retain(|c| c.is_alphabetic());
+
+            dbg!(&output);
+            let value: bool = output
+                .parse()
+                .context("Failed to parse output of `nix eval`")?;
+
+            Ok(value)
+        } else {
+            bail!("`nix eval` returned status {}: {}", result.status, stderr);
+        }
+    }
+
     async fn get_hosts_list(&self) -> Result<Vec<String>> {
         let mut command = Command::new("nix");
         command.args([
@@ -169,6 +212,16 @@ impl ProjectContext {
         log::info!("Deploying {host} to {hostname}");
 
         if enable_auto_revert {
+            if !self
+                .check_project_config_flag(host, &["auto-revert", "enabled"])
+                .await
+                .context("Failed to check if host supports auto-revert")?
+            {
+                bail!("Configuration to deploy does not support auto-revert.\n\
+                    Pass `--no-auto-revert` if you are CERTAIN you want to deploy without this.\n\
+                    Add the `auto-revert.nix` module to your configuration to add auto-revert support.");
+            }
+
             log::info!("Setting auto-revert timer using ssh.");
             self.run_ssh(
                 host,
