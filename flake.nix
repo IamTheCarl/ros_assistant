@@ -16,6 +16,7 @@
 
   outputs = { self, nixpkgs, rass-cli, flake-utils, ... }: {
     rosify = ./packages/rosify_package;
+    rass-modules = rass-cli + "/nix_modules";
   } // flake-utils.lib.eachDefaultSystem (system:
   {
     packages = {
