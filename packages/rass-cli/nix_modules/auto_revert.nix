@@ -22,7 +22,7 @@ in
 
   config = {
     systemd.services.auto-revert = {
-      enable = cfg.enable;
+      enable = cfg.enabled;
       description = "Auto revert on update failure";
       wantedBy = [ "multi-user.target" ];
       script = ''
