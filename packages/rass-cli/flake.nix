@@ -46,12 +46,6 @@
               src = craneLib.cleanCargoSource ./.;
           
 	      strictDeps = true;
-         
-              propagatedBuildInputs = [
-                pkgs.nix
-                pkgs.openssh
-	        pkgs.pixiecore
-              ];
             };
 	  in
 	    pkgs.runCommandLocal "rass-cli" {
@@ -62,7 +56,7 @@
               mkdir -p $out/bin
               cp ${package}/bin/cli $out/bin/rass
               wrapProgram $out/bin/rass \
-                --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin:{}
+                --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin:${pkgs.pixiecore}/bin:{}
 	    '';
       }
     );
