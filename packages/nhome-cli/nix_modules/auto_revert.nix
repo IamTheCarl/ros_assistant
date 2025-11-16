@@ -1,5 +1,5 @@
 # Provides a service that will automatically revert to a previous derivation
-# if rass fails to cancel the reversion in time. This is meant to be a convenient
+# if rhome fails to cancel the reversion in time. This is meant to be a convenient
 # recovery tool if you accidentally update the configuration in a way that locks
 # you out of your robot.
 { config, pkgs ? import <nixpkgs> {}, lib, ... }:
@@ -27,11 +27,11 @@ in
       wantedBy = [ "multi-user.target" ];
       script = ''
         #!${pkgs.bash}/bin/bash -e
-        if [ -f '/run/rass/auto-revert/set' ]; then
+        if [ -f '/run/rhome/auto-revert/set' ]; then
           echo "Auto revert timer set to ${toString cfg.time} second and started."
           ${pkgs.coreutils}/bin/sleep ${toString cfg.time}
         
-          if [ -f '/run/rass/auto-revert/set' ]; then
+          if [ -f '/run/rhome/auto-revert/set' ]; then
             echo "Timer has expired. Reverting to previous generation."
 	    cd /tmp
 	    rm -f result
@@ -39,7 +39,7 @@ in
               -I nixpkgs=/root/.nix-defexpr/channels \
               test --rollback --verbose --fast
             echo "System generation reverted"
-            rm -f '/run/rass/auto-revert/set'
+            rm -f '/run/rhome/auto-revert/set'
           else
             echo "Auto revert aborted."
           fi

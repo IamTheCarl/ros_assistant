@@ -48,14 +48,14 @@
 	      strictDeps = true;
             };
 	  in
-	    pkgs.runCommandLocal "rhome-cli" {
+	    pkgs.runCommandLocal "nhome-cli" {
 	      nativeBuildInputs = [
                 pkgs.makeWrapper
               ];
 	    } ''
               mkdir -p $out/bin
-              cp ${package}/bin/cli $out/bin/rhome
-              wrapProgram $out/bin/rhome \
+              cp ${package}/bin/cli $out/bin/nhome
+              wrapProgram $out/bin/nhome \
                 --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin:${pkgs.pixiecore}/bin:{}
 	    '';
       }
