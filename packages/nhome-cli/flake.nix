@@ -1,5 +1,5 @@
 {
-  description = "RASS command line tool";
+  description = "Nix-Home command line tool";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
@@ -48,14 +48,14 @@
 	      strictDeps = true;
             };
 	  in
-	    pkgs.runCommandLocal "rass-cli" {
+	    pkgs.runCommandLocal "rhome-cli" {
 	      nativeBuildInputs = [
                 pkgs.makeWrapper
               ];
 	    } ''
               mkdir -p $out/bin
-              cp ${package}/bin/cli $out/bin/rass
-              wrapProgram $out/bin/rass \
+              cp ${package}/bin/cli $out/bin/rhome
+              wrapProgram $out/bin/rhome \
                 --prefix PATH : ${pkgs.nix}/bin:${pkgs.nixos-rebuild}/bin:${pkgs.openssh}/bin:${pkgs.pixiecore}/bin:{}
 	    '';
       }
