@@ -21,5 +21,5 @@ Once the machines have been initially brought up, you can push updates to them o
 If you choose to build installer ISOs for this, you'll find that system-c won't build since it's meant for a Raspberry Pi. You can ignore it using the host select feature of  the deployment system.
 
 ```
-rass deploy --hosts 'system-[ab]' installer
+rhome deploy --hosts 'system-[ab]' installer
 ```

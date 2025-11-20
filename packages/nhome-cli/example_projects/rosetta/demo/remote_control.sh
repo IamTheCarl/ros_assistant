@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # We have to disable the firewall on the robot first.
-rass firewall pierce 
+rhome firewall pierce 
 
 trap "exit" INT TERM
 trap "kill 0" EXIT

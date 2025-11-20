@@ -1,12 +1,12 @@
-# ROS Assistant
+# Nix Home
 
-ROS Assistant is system to declaratively develop robots and control them through home automation systems.
+Nix Home is an ecosystem built to declaratively develop robots and other appliances that integrate with [Home Assistant](https://www.home-assistant.io/).
 
 This project is currently a long term experiment. While promising, it is far from stabilized and may later be broken up into smaller projects.
 
-## [RASS-cli](packages/rass-cli/README.md)
+## [rhome-cli](packages/rhome-cli/README.md)
 
-A command line interface for building and deploying software to robots.
+A command line interface for building and deploying software to robots and appliances.
 
 ## [Home Assistant Bridge](homeassistant/home_assistant_bridge/)
 

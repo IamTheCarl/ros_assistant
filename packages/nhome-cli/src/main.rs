@@ -26,7 +26,7 @@ async fn main() {
 }
 
 async fn application(args: arguments::RosAssistant) -> Result<()> {
-    log::info!("ROS Assistant CLI v{}", std::env!("CARGO_PKG_VERSION"));
+    log::info!("Nix Home CLI v{}", std::env!("CARGO_PKG_VERSION"));
 
     match args.subcommand {
         arguments::SubCommand::NewProject(new_project_args) => {
@@ -225,7 +225,7 @@ impl ProjectContext {
             log::info!("Setting auto-revert timer using ssh.");
             self.run_ssh(
                 host,
-                Some("mkdir -p /run/rass/auto-revert && touch /run/rass/auto-revert/set"),
+                Some("mkdir -p /run/rhome/auto-revert && touch /run/rhome/auto-revert/set"),
             )
             .await
             .context("Failed to run command to start auto-revert timer")?;
@@ -274,7 +274,7 @@ impl ProjectContext {
             // Cancel the auto-revert.
             if enable_auto_revert {
                 log::info!("Cancelling auto-revert timer using ssh.");
-                self.run_ssh(host, Some("rm -f /run/rass/auto-revert/set"))
+                self.run_ssh(host, Some("rm -f /run/rhome/auto-revert/set"))
                     .await
                     .context("Failed to run command to stop auto-revert timer")?;
             }
